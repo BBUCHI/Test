@@ -1,0 +1,2701 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atlas — Éditeur de monde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --page-bg: #f6f6f6;
+    --content-bg: #ffffff;
+    --sidebar-bg: #f8f9fa;
+    --border: #a2a9b1;
+    --border-light: #eaecf0;
+    --text: #202122;
+    --text-muted: #54595d;
+    --link: #0645ad;
+    --link-hover: #0645ad;
+    --red-link: #ba0000;
+    --red-link-bg: #fee7e6;
+    --accent: #36c;
+    --gold: #a8762b;
+    --danger: #ba0000;
+    --danger-soft: #fee7e6;
+    --font-heading: 'Linux Libertine','Georgia','Times New Roman',serif;
+    --font-body: Arial, Helvetica, 'Source Serif 4', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    --radius: 2px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; background:var(--page-bg); color:var(--text); font-family:var(--font-body); font-size:14px; }
+  ::selection{ background:#d6e4ff; color:var(--text); }
+  button{ font-family:var(--font-body); cursor:pointer; }
+  input, select, textarea{ font-family:var(--font-body); color:var(--text); }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  a{ color:var(--link); text-decoration:none; }
+  a:hover{ text-decoration:underline; }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+
+  #app{ display:flex; flex-direction:column; height:100vh; }
+
+  /* ---------- Topbar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 20px; height:56px; background:var(--content-bg); color:var(--text);
+    border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .brand{ display:flex; align-items:center; gap:9px; font-family:var(--font-heading); font-weight:700; font-size:1.4rem; letter-spacing:.01em; color:var(--text); }
+  .brand svg{ width:24px; height:24px; }
+  .file-controls{ display:flex; align-items:center; gap:6px; }
+  .global-search-wrap{ position:relative; flex:1; max-width:440px; margin:0 20px; }
+  .global-search-input{ width:100%; padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--sidebar-bg); font-size:.82rem; }
+  .global-search-dropdown{ position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--content-bg); border:1px solid var(--border); border-radius:3px; box-shadow:0 6px 18px rgba(0,0,0,.18); max-height:360px; overflow-y:auto; z-index:30; text-align:left; }
+  .global-search-item{ display:flex; justify-content:space-between; gap:10px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border-light); font-size:.82rem; }
+  .global-search-item:last-child{ border-bottom:none; }
+  .global-search-item:hover{ background:var(--sidebar-bg); }
+  .global-search-item .gs-type{ color:var(--text-muted); font-size:.72rem; flex-shrink:0; }
+  .global-search-empty{ padding:10px 12px; color:var(--text-muted); font-style:italic; font-size:.82rem; }
+  .file-controls button{
+    background:var(--sidebar-bg); border:1px solid var(--border); color:var(--text);
+    padding:6px 12px; border-radius:var(--radius); font-size:.8rem;
+  }
+  .file-controls button:hover{ background:var(--border-light); }
+  .file-controls button.primary{ background:#36c; border-color:#2a4b8d; color:#fff; font-weight:600; }
+  .file-controls button.primary:hover{ background:#2a4b8d; }
+  #fileStatus{ font-family:var(--font-mono); font-size:.7rem; color:var(--text-muted); margin-left:6px; min-width:170px; }
+
+  /* ---------- Layout ---------- */
+  .body-layout{ flex:1; display:grid; grid-template-columns:190px 280px 1fr; min-height:0; }
+
+  /* ---------- Sidebar (Wikipedia left-nav style) ---------- */
+  .sidebar{ background:var(--sidebar-bg); border-right:1px solid var(--border-light); overflow-y:auto; padding:16px 0; }
+  .side-item{
+    display:flex; align-items:center; gap:8px; width:100%; padding:5px 16px; background:none; border:none;
+    text-align:left; font-size:.8rem; color:var(--link);
+  }
+  .side-item:hover{ text-decoration:underline; }
+  .side-item.active{ color:var(--text); font-weight:700; }
+  .side-icon{ font-size:.85rem; width:14px; text-align:center; color:var(--text-muted); }
+  .side-label{ flex:1; }
+  .side-count{ font-family:var(--font-mono); font-size:.68rem; color:var(--text-muted); }
+
+  /* ---------- List panel ---------- */
+  .list-panel{ background:var(--content-bg); border-right:1px solid var(--border-light); overflow-y:auto; padding:18px; }
+  .list-header{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; gap:8px; border-bottom:1px solid var(--border-light); padding-bottom:8px; }
+  .list-header h2{ font-family:var(--font-heading); font-size:1.3rem; margin:0; font-weight:400; color:var(--text); }
+  .btn-primary{ background:#f8f9fa; color:var(--link); border:1px solid var(--border); padding:5px 10px; border-radius:var(--radius); font-size:.76rem; }
+  .btn-primary:hover{ background:var(--border-light); text-decoration:underline; }
+  .search-input{ width:100%; padding:6px 9px; border:1px solid var(--border); border-radius:var(--radius); background:var(--content-bg); font-size:.82rem; margin-bottom:10px; }
+  .sort-row{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .sort-select{ flex:1; padding:5px 8px; border:1px solid var(--border); border-radius:var(--radius); background:var(--content-bg); font-size:.8rem; }
+  .items-wrap{ display:flex; flex-direction:column; gap:0; }
+  .list-item{
+    display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;
+    padding:6px 8px; background:none; border:none; border-bottom:1px solid var(--border-light); text-align:left; font-size:.84rem; color:var(--link);
+  }
+  .list-item:hover{ background:var(--sidebar-bg); text-decoration:underline; }
+  .list-item.active{ background:#eaf3ff; font-weight:700; color:var(--text); }
+  .li-nom{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .empty-hint{ color:var(--text-muted); font-size:.85rem; font-style:italic; }
+
+  /* ---------- Detail panel ---------- */
+  .detail-panel{ display:flex; flex-direction:column; background:var(--content-bg); min-height:0; }
+  .detail-header{ flex-shrink:0; padding:24px 36px 0; background:var(--content-bg); }
+  .detail-body-scroll{ flex:1; min-height:0; overflow-y:auto; padding:0 36px 100px; }
+  .empty-state{ color:var(--text-muted); font-style:italic; padding-top:40px; text-align:center; }
+
+  /* Shared header row for both view + edit modes */
+  .idbadge{
+    font-family:var(--font-mono); background:var(--sidebar-bg); color:var(--text-muted); border:1px solid var(--border-light); padding:2px 8px; border-radius:3px;
+    font-size:.7rem; letter-spacing:.02em; white-space:nowrap;
+  }
+  .chip-id{ font-family:var(--font-mono); font-size:.66rem; opacity:.55; margin:0 4px; }
+
+  /* ---------- View (article) mode — Wikipedia look ---------- */
+  .wiki-page{ max-width:920px; }
+  .wiki-header-row{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; }
+  .wiki-title{ font-family:var(--font-heading); font-size:2.1rem; font-weight:400; margin:0; color:var(--text); }
+  .wiki-subtitle{ font-size:.8rem; color:var(--text-muted); margin-top:2px; }
+  .wiki-title-rule{ border-bottom:1px solid var(--border); margin:8px 0 16px; }
+  .wiki-actions{ display:flex; gap:8px; flex-shrink:0; padding-bottom:6px; }
+  .btn-edit-toggle{ background:var(--sidebar-bg); border:1px solid var(--border); color:var(--link); padding:5px 12px; border-radius:var(--radius); font-size:.78rem; }
+  .btn-edit-toggle:hover{ background:var(--border-light); text-decoration:underline; }
+
+  .infobox{
+    float:right; width:270px; margin:0 0 16px 20px; background:var(--sidebar-bg);
+    border:1px solid var(--border); border-radius:3px; font-size:.8rem;
+  }
+  .infobox-title{ background:#eaecf0; font-family:var(--font-heading); font-weight:700; font-size:1.05rem; text-align:center; padding:8px; border-bottom:1px solid var(--border); }
+  .infobox-image{ display:block; width:100%; max-height:280px; object-fit:cover; border-bottom:1px solid var(--border); }
+  .image-field-preview{ display:block; max-width:200px; max-height:200px; margin-top:6px; border:1px solid var(--border-light); border-radius:var(--radius); object-fit:cover; }
+  .infobox-table{ width:100%; border-collapse:collapse; }
+  .infobox-table tr{ border-top:1px solid var(--border-light); }
+  .infobox-table tr:first-child{ border-top:none; }
+  .infobox-table th{ text-align:left; font-weight:600; color:var(--text-muted); padding:6px 8px; width:42%; vertical-align:top; }
+  .infobox-table td{ padding:6px 8px; vertical-align:top; }
+  .infobox-field .view-list{ margin:0; padding-left:16px; }
+  .infobox-field .view-list li{ margin-bottom:2px; }
+  .infobox-field .chip-row-view{ margin:0; gap:4px; }
+  .infobox-field .fact-line{ margin:0; }
+  .infobox-field .prose{ margin:0; }
+  .infobox-field .sub-heading{ display:none; }
+  .wiki-lead{ font-size:1.02rem; line-height:1.75; margin:0 0 18px; }
+  .prose .narrative-ul{ margin:6px 0; padding-left:22px; }
+  .prose code{ font-family:var(--font-mono); background:var(--sidebar-bg); padding:1px 5px; border-radius:3px; font-size:.88em; }
+
+  .wiki-body{ clear:none; }
+  .backlinks-section{ clear:both; margin-top:32px; padding-top:12px; border-top:2px solid var(--border); }
+  .backlinks-section h2{ color:var(--text-muted); font-size:1.05rem; }
+  .wiki-section{ margin-bottom:18px; }
+  .wiki-section h2{ font-family:var(--font-heading); font-weight:400; font-size:1.35rem; color:var(--text); border-bottom:1px solid var(--border-light); padding-bottom:4px; margin:0 0 8px; }
+  .sub-heading{ font-family:var(--font-heading); font-weight:700; font-size:1rem; margin:10px 0 4px; }
+  .prose{ line-height:1.65; margin:0 0 8px; white-space:pre-wrap; }
+  .narrative-view-list{ list-style:none; padding-left:0; }
+  .narrative-view-list li{ margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed var(--border-light); }
+  .narrative-view-list li:last-child{ border-bottom:none; }
+  .narrative-list-edit{ display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
+  .narrative-item{ display:flex; gap:8px; align-items:flex-start; }
+  .wikilink-autocomplete{ border:1px solid var(--border); background:var(--content-bg); box-shadow:0 4px 12px rgba(0,0,0,.15); max-height:220px; overflow-y:auto; margin-top:2px; margin-bottom:6px; border-radius:3px; font-size:.82rem; }
+  .wikilink-ac-item{ display:flex; justify-content:space-between; gap:8px; padding:6px 10px; cursor:pointer; }
+  .wikilink-ac-item:hover{ background:var(--sidebar-bg); }
+  .wikilink-ac-type{ color:var(--text-muted); font-size:.72rem; }
+  .wikilink-ac-empty{ padding:6px 10px; color:var(--text-muted); font-style:italic; }
+  .narrative-item textarea{ flex:1; }
+  .fact-line{ margin:0 0 6px; }
+  .fact-line.empty{ color:var(--text-muted); font-style:italic; }
+  .view-list{ margin:0 0 8px; padding-left:22px; line-height:1.7; }
+  .wiki-link{ color:var(--link); }
+  .wiki-link.missing{ color:var(--red-link); }
+  .chip-row-view{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 8px; }
+  .tag-pill{ display:inline-block; background:var(--sidebar-bg); border:1px solid var(--border-light); color:var(--link); padding:3px 10px; border-radius:12px; font-size:.76rem; cursor:pointer; }
+  .tag-pill:hover{ background:var(--border-light); text-decoration:underline; }
+
+  /* ---------- Edit mode (form) ---------- */
+  .record-article{ max-width:760px; }
+  .record-header{ display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:20px; }
+  .title-input{
+    flex:1; font-family:var(--font-heading); font-size:1.8rem; font-weight:400; border:none; background:none;
+    padding:2px 0; color:var(--text); border-bottom:1px dashed transparent;
+  }
+  .title-input:focus{ border-bottom:1px dashed var(--accent); }
+
+  .field-section{ margin-bottom:16px; }
+  .field-section h3{ font-family:var(--font-heading); font-size:.95rem; font-weight:700; color:var(--text-muted); margin:0 0 3px; text-transform:uppercase; letter-spacing:.04em; font-size:.74rem; }
+  .field-hint{ font-size:.78rem; color:var(--text-muted); margin:0 0 5px; font-style:italic; }
+  .field-row{ display:flex; flex-wrap:wrap; gap:20px; }
+  .field-row.wiki-section{ border-bottom:none; }
+  .field-cell{ flex:1 1 200px; min-width:150px; }
+
+  input[type=text], input[type=number], select, textarea{
+    padding:6px 9px; border:1px solid var(--border); border-radius:var(--radius); background:var(--content-bg); font-size:.86rem;
+  }
+  textarea{ width:100%; resize:vertical; font-family:var(--font-body); line-height:1.5; min-height:64px; overflow:hidden; }
+  .invalid{ border-color:var(--danger) !important; background:var(--danger-soft) !important; }
+
+  .checkbox-label{ display:inline-flex; align-items:center; gap:6px; font-size:.86rem; }
+
+  .subfield{ margin-bottom:7px; }
+  .subfield label{ display:block; font-size:.74rem; text-transform:uppercase; letter-spacing:.03em; color:var(--text-muted); margin-bottom:2px; }
+
+  .chip-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+  .chip{ display:inline-flex; align-items:center; background:var(--content-bg); border:1px solid var(--border); border-radius:20px; padding:4px 6px 4px 12px; font-size:.8rem; }
+  .chip-remove{ background:none; border:none; color:var(--text-muted); font-size:1rem; line-height:1; margin-left:6px; padding:2px 5px; border-radius:50%; }
+  .chip-remove:hover{ background:var(--danger-soft); color:var(--danger); }
+  .add-row{ display:flex; gap:6px; align-items:center; }
+  .add-row input{ flex:1; }
+  .btn-small{ background:var(--sidebar-bg); border:1px solid var(--border); padding:5px 11px; border-radius:var(--radius); font-size:.76rem; color:var(--text); }
+  .btn-small:hover{ background:var(--border-light); }
+  .btn-danger{ background:none; border:1px solid var(--danger); color:var(--danger); padding:5px 11px; border-radius:var(--radius); font-size:.76rem; }
+  .btn-danger:hover{ background:var(--danger-soft); }
+
+  .sub-box{ border:1px solid var(--border-light); border-radius:var(--radius); padding:9px; margin-bottom:7px; background:var(--sidebar-bg); }
+  .sub-row{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:6px; }
+  .inline-label{ font-size:.72rem; text-transform:uppercase; letter-spacing:.03em; color:var(--text-muted); }
+
+  .timeline-list{ display:flex; flex-direction:column; gap:5px; margin-bottom:6px; }
+  .timeline-row{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; background:var(--sidebar-bg); border:1px solid var(--border-light); border-radius:var(--radius); padding:6px; }
+  .ref-input{ min-width:170px; flex:1; }
+  .ref-row{ display:flex; gap:8px; align-items:center; }
+
+  .date-editor{ display:flex; align-items:center; gap:8px; }
+  .field-warning{ color:var(--danger); font-size:.78rem; margin-top:4px; display:none; }
+
+  .readonly-list{ list-style:none; padding:0; margin:0 0 10px; font-size:.85rem; color:var(--text); }
+  .readonly-list li{ padding:4px 0; border-bottom:1px dashed var(--border-light); }
+
+  /* ---------- Accueil ---------- */
+  .home-table{ width:100%; border-collapse:collapse; margin-top:8px; }
+  .home-table th{ text-align:left; font-family:var(--font-heading); font-weight:700; border-bottom:2px solid var(--border); padding:6px 10px 6px 0; font-size:.82rem; color:var(--text-muted); }
+  .home-table td{ padding:6px 10px 6px 0; border-bottom:1px solid var(--border-light); font-size:.86rem; vertical-align:middle; }
+  .home-pct-cell{ display:flex; align-items:center; gap:8px; }
+  .home-pct-bar{ width:110px; height:8px; background:var(--border-light); border-radius:4px; overflow:hidden; flex-shrink:0; }
+  .home-pct-fill{ height:100%; background:#36c; }
+  .home-pct-label{ font-family:var(--font-mono); font-size:.72rem; color:var(--text-muted); width:34px; text-align:right; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(32,33,34,.5); display:flex; align-items:center; justify-content:center; z-index:50; }
+  .modal-box{ background:var(--content-bg); border-radius:3px; padding:22px 24px; width:420px; max-width:92vw; max-height:85vh; overflow-y:auto; box-shadow:0 4px 20px rgba(0,0,0,.35); border-top:3px solid #36c; }
+  .modal-box h3{ font-family:var(--font-heading); font-weight:700; margin-top:0; }
+  .modal-row{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .modal-row input, .modal-row select{ flex:1; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  .modal-actions button{ padding:7px 14px; border-radius:var(--radius); font-size:.83rem; border:1px solid var(--border); background:var(--sidebar-bg); }
+  .issue-list{ list-style:none; padding:0; margin:0; max-height:320px; overflow-y:auto; }
+  .issue-list li{ border-bottom:1px solid var(--border-light); }
+  .link-btn{ background:none; border:none; text-align:left; width:100%; padding:8px 4px; font-size:.82rem; color:var(--link); }
+  .link-btn:hover{ text-decoration:underline; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:900px){
+    .body-layout{ grid-template-columns:1fr; grid-template-rows:auto auto 1fr; }
+    .sidebar{ display:flex; overflow-x:auto; padding:8px; border-right:none; border-bottom:1px solid var(--border-light); }
+    .side-item{ flex-direction:column; gap:3px; width:auto; padding:6px 12px; }
+    .list-panel{ max-height:38vh; }
+    .detail-header{ padding:16px 18px 0; }
+    .detail-body-scroll{ padding:0 18px 100px; }
+    .infobox{ float:none; width:100%; margin:0 0 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="17" stroke="#D9B876" stroke-width="2"/>
+        <path d="M20 6 L23 18 L20 20 L17 18 Z" fill="#D9B876"/>
+        <path d="M20 34 L17 22 L20 20 L23 22 Z" fill="#FBF8EF" opacity=".5"/>
+        <circle cx="20" cy="20" r="2.2" fill="#D9B876"/>
+      </svg>
+      <span>Atlas</span>
+    </div>
+    <div class="global-search-wrap">
+      <input type="text" id="globalSearch" class="global-search-input" placeholder="Rechercher dans tout le monde (tags, anecdotes, texte, infobox…)">
+    </div>
+    <div class="file-controls">
+      <input type="file" id="fileInput" accept=".json" hidden>
+      <button id="btnLoad">Charger un monde</button>
+      <button id="btnNew">Nouveau monde</button>
+      <button id="btnRandom">Page aléatoire</button>
+      <button id="btnCheck">Vérifier l'intégrité</button>
+      <button id="btnSave" class="primary">Enregistrer</button>
+      <span id="fileStatus"></span>
+    </div>
+  </header>
+  <div class="body-layout">
+    <nav class="sidebar" id="sidebar"></nav>
+    <section class="list-panel" id="listPanel"></section>
+    <section class="detail-panel" id="detailPanel">
+      <div class="detail-header" id="detailHeader"></div>
+      <div class="detail-body-scroll" id="detailBody"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   CONSTANTES / SCHEMA-LITE
+   ========================================================= */
+const TYPE_ORDER = ['personnages','lieux','groupes','reliques','periodes','especes','cultures','materiaux','objets','alignements','regions','events'];
+
+const TYPE_META = {
+  personnages:{ label:'Personnages', singular:'Personnage', prefix:'PER', icon:'☉' },
+  lieux:      { label:'Lieux',       singular:'Lieu',       prefix:'LIEU', icon:'▲' },
+  groupes:    { label:'Groupes',     singular:'Groupe',     prefix:'GRP', icon:'⚑' },
+  reliques:   { label:'Reliques',    singular:'Relique',    prefix:'REL', icon:'✦' },
+  periodes:   { label:'Périodes',    singular:'Période',    prefix:'PRD', icon:'◐' },
+  especes:    { label:'Espèces',     singular:'Espèce',     prefix:'ESP', icon:'❦' },
+  cultures:   { label:'Cultures',    singular:'Culture',    prefix:'CUL', icon:'⬡' },
+  materiaux:  { label:'Matériaux',   singular:'Matériau',   prefix:'MAT', icon:'◆' },
+  objets:     { label:'Objets',      singular:'Objet',      prefix:'OBJ', icon:'⚒' },
+  alignements:{ label:'Alignements', singular:'Alignement', prefix:'ALI', icon:'⚖' },
+  regions:    { label:'Régions',     singular:'Région',     prefix:null, icon:'◈' },
+  events:     { label:'Événements',  singular:'Événement',  prefix:'EVT', icon:'●' },
+};
+
+const TYPE_TO_COLLECTION = {
+  personnage:'personnages', lieu:'lieux', groupe:'groupes', relique:'reliques', periode:'periodes',
+  espece:'especes', culture:'cultures', materiau:'materiaux', objet:'objets', region:'regions', alignement:'alignements'
+};
+const REF_TYPE_OPTIONS = Object.keys(TYPE_TO_COLLECTION).map(k=>({value:k, label:TYPE_META[TYPE_TO_COLLECTION[k]].singular}));
+
+const FORM_SPEC = {
+  alignements: [], // entité basique : seulement un nom (+ id), rien d'autre à remplir
+  events: [
+    { key:'tags', label:'Tags', kind:'tags' },
+    { key:'titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'date', label:'Date', kind:'date', compact:true },
+    { key:'ordre', label:'Ordre', kind:'number', min:1, compact:true, hint:"Départage à date égale (ignoré si « marquant »)." },
+    { key:'marquant', label:'Marquant', kind:'boolean', compact:true, checkboxLabel:'Passe en premier à date égale' },
+    { key:'lieu', label:'Lieu', kind:'ref', sources:['lieux','regions'], nullable:true },
+    { key:'characters', label:'Personnages impliqués', kind:'ref-list', sources:['personnages'] },
+    { key:'resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+  personnages: [
+    { key:'attributs.photo', label:'Photo', kind:'image', hint:"URL d'une image (portrait). Laissez vide pour ne rien afficher." },
+    { key:'attributs.tags', label:'Tags', kind:'tags' },
+    { key:'attributs.titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'genre', label:'Genre', kind:'select', options:['Homme','Femme','Non-binaire','Autre','??'], compact:true },
+    { key:'puissance', label:'Puissance', kind:'number', min:0, max:5, compact:true, hint:'0=pas combattant · 1=bat 1 personne · 2=bat un groupe · 3=conquiert une ville · 4=conquiert une région · 5=défie le monde' },
+    { key:'especes', label:'Espèce(s)', kind:'ref-list', sources:['especes'] },
+    { key:'attributs.formes', label:'Formes', kind:'personnage-formes', hint:"Les formes que ce personnage peut prendre (métamorphose, avatars…)." },
+    { key:'timeline', label:'Existence', kind:'timeline', hint:'Vie / mort. Plusieurs périodes = résurrection.' },
+    { key:'alignements', label:'Alignement(s)', kind:'alignements' },
+    { key:'roles', label:'Rôles & position', kind:'roles', hint:"La position/résidence peut être ajoutée ici comme un rôle générique (ex. « résidence »)." },
+    { key:'liste_victimes', label:'Victimes', kind:'ref-list', sources:['personnages'] },
+    { key:'tue_par', label:'Tué par', kind:'tuepar' },
+    { key:'attributs.resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'description', label:'Description', kind:'description', fields:[
+      ['apparence','Apparence'],['personnalite','Personnalité'],['pouvoirs','Pouvoirs'],['histoire','Histoire'],
+      ['localisation','Localisation'],['objectifs_motivations_croyances','Objectifs / motivations / croyances'],
+      ['relations','Relations (narratif)'],['equipement','Équipement (narratif)']
+    ]},
+    { key:'attributs.anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+  lieux: [
+    { key:'attributs.tags', label:'Tags', kind:'tags' },
+    { key:'attributs.titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'type_lieu', label:'Type de lieu', kind:'text', compact:true, datalist:['ville','village','forêt','ruine','royaume','forteresse','sous-lieu','montagne','désert','marais','île','grotte'] },
+    { key:'altitude', label:'Altitude(s)', kind:'int-list', min:0, max:6, compact:true },
+    { key:'situe_dans', label:'Situé dans (si sous-lieu)', kind:'ref', sources:['lieux'], nullable:true, hint:"Uniquement pour un sous-lieu — altitude et régions sont alors hérités du lieu englobant." },
+    { key:'regions', label:'Région(s)', kind:'ref-list', sources:['regions'] },
+    { key:'timeline', label:'Existence', kind:'timeline' },
+    { key:'attributs.resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'description', label:'Description', kind:'description', fields:[
+      ['apparence','Apparence'],['histoire','Histoire'],['culture_coutumes','Culture & coutumes'],['faune_flore','Faune & flore'],
+      ['architecture_infrastructures','Architecture & infrastructures'],['ressources_economie','Ressources & économie'],
+      ['politique_dirigeants','Politique & dirigeants'],['religion_croyances','Religion & croyances'],
+      ["relations_autres_lieux","Relations avec d'autres lieux"],['evenements_marquants','Événements marquants']
+    ]},
+    { key:'habitants', label:'Habitants (calculé)', kind:'habitants', hint:"Pertinent surtout pour ville/village. Recalculé depuis les rôles des personnages." },
+    { key:'attributs.anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+  groupes: [
+    { key:'attributs.tags', label:'Tags', kind:'tags' },
+    { key:'attributs.titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'formel', label:'Formel', kind:'boolean', compact:true, checkboxLabel:'Organisation formelle' },
+    { key:'membres', label:'Membres', kind:'membres', sources:['personnages'] },
+    { key:'timeline', label:'Existence', kind:'timeline' },
+    { key:'attributs.resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'description', label:'Description', kind:'description', fields:[
+      ['origine','Origine'],['histoire','Histoire'],['objectifs','Objectifs'],['organisation_interne','Organisation interne'],
+      ['membres_notables','Membres notables (narratif)'],['mode_recrutement','Mode de recrutement'],
+      ['territoire_lieu_rassemblement','Territoire / lieu de rassemblement (narratif)'],['influence','Influence'],
+      ['activites','Activités'],['symboles_identite_visuelle',"Symboles & identité visuelle"],['traditions_coutumes','Traditions & coutumes']
+    ]},
+    { key:'attributs.anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+  reliques: [
+    { key:'attributs.tags', label:'Tags', kind:'tags' },
+    { key:'attributs.titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'est_unique', label:'Unique', kind:'boolean', compact:true, checkboxLabel:'Exemplaire unique' },
+    { key:'createurs', label:'Créateur(s)', kind:'ref-list', sources:['personnages'] },
+    { key:'evenement_creation', label:'Événement de création', kind:'ref', sources:['events'], nullable:true },
+    { key:'materiaux', label:'Matériaux', kind:'ref-list', sources:['materiaux'] },
+    { key:'proprietaires', label:'Propriétaire(s)', kind:'membres', sources:['personnages'] },
+    { key:'timeline', label:'Existence', kind:'timeline' },
+    { key:'attributs.resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'description', label:'Description', kind:'description', fields:[
+      ['apparence','Apparence'],['capacites','Capacités'],['creation','Création'],['histoire','Histoire'],
+      ['impact_societal_militaire','Impact sociétal / militaire']
+    ]},
+    { key:'attributs.anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+  periodes: [
+    { key:'attributs.tags', label:'Tags', kind:'tags' },
+    { key:'attributs.titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'lieu', label:'Lieu / Région', kind:'ref', sources:['lieux','regions'], nullable:true },
+    { key:'affecte', label:'Entités affectées', kind:'affecte' },
+    { key:'timeline', label:'Étapes', kind:'timeline' },
+    { key:'attributs.resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'attributs.anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+  especes: [
+    { key:'attributs.tags', label:'Tags', kind:'tags' },
+    { key:'attributs.titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'attributs.formes', label:'Formes', kind:'tags', hint:"Les formes possibles pour cette espèce (ex. Loup, Humain, Ours…)." },
+    { key:'organisations', label:'Existence', kind:'espece-orgs', hint:"Type d'organisation, source (l'entité qui l'atteste — personnage, groupe, relique, culture…) et période. Si rien n'est rempli, l'espèce est considérée Unique." },
+    { key:'attributs.resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'description', label:'Description', kind:'description', fields:[['capacites','Capacités'],['histoire','Histoire'],['relations','Relations']] },
+    { key:'attributs.anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+  cultures: [
+    { key:'attributs.tags', label:'Tags', kind:'tags' },
+    { key:'attributs.titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'timeline', label:'Existence', kind:'timeline' },
+    { key:'attributs.resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'description', label:'Description', kind:'textarea', hint:'String libre unique (pas de sous-champs pour Culture).' },
+    { key:'attributs.anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+  materiaux: [
+    { key:'attributs.tags', label:'Tags', kind:'tags' },
+    { key:'attributs.titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'est_organique', label:'Organique', kind:'boolean', compact:true, checkboxLabel:'Ce matériau est organique' },
+    { key:'est_rare', label:'Rare', kind:'boolean', compact:true, checkboxLabel:'Matériau rare' },
+    { key:'porteur_de_chant', label:'Porteur de chant', kind:'boolean', compact:true, checkboxLabel:'Ce matériau est porteur de chant' },
+    { key:'timeline', label:'Existence', kind:'timeline' },
+    { key:'attributs.resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'description', label:'Description', kind:'description', fields:[
+      ['apparence','Apparence'],['capacites','Capacités'],['localisation_zone_extraction',"Localisation / zone d'extraction"],['exemples_utilisation',"Exemples d'utilisation"]
+    ]},
+    { key:'attributs.anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+  objets: [
+    { key:'attributs.tags', label:'Tags', kind:'tags' },
+    { key:'attributs.titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'materiaux', label:'Matériaux (organiques ou non — jamais porteurs de chant)', kind:'ref-list', sources:['materiaux'], excludeFlag:'porteur_de_chant' },
+    { key:'inventeurs', label:'Inventeur(s)', kind:'ref-list', sources:['personnages'] },
+    { key:'timeline', label:'Existence', kind:'timeline' },
+    { key:'attributs.resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'description', label:'Description', kind:'description', fields:[
+      ['fonctions','Fonctions'],['apparence','Apparence'],['methode_fabrication','Méthode de fabrication'],['origine','Origine'],
+      ['utilisateurs_courants','Utilisateurs courants'],['evolution_historique','Évolution historique']
+    ]},
+    { key:'attributs.anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+  regions: [
+    { key:'tags', label:'Tags', kind:'tags' },
+    { key:'titres_honorifiques', label:'Titres honorifiques', kind:'tags', hint:"Titres, épithètes ou surnoms honorifiques attribués à cette fiche." },
+    { key:'abs', label:'Abscisse (lettre)', kind:'text', compact:true },
+    { key:'ord', label:'Ordonnée (nombre)', kind:'number', min:1, max:14, compact:true },
+    { key:'resume', label:'Résumé', kind:'lead', hint:"2 à 5 phrases qui présentent le sujet — affichées juste au-dessus des sections narratives (Description, etc.), pas au-dessus des faits ci-dessus." },
+    { key:'anecdotes', label:'Anecdotes', kind:'narrative-list' },
+  ],
+};
+
+/* L'infobox est dérivée automatiquement de FORM_SPEC : tout y va SAUF le contenu de fond
+   (description, habitants dérivés, anecdotes narratives) — pour ne jamais dupliquer une info
+   entre l'infobox et le corps de la page. */
+function isBodyOnlyField(def){
+  if(def.kind==='description') return true;
+  if(def.kind==='habitants') return true;
+  if(def.kind==='narrative-list') return true;
+  if(def.kind==='lead') return true;
+  if(def.key==='description' && def.kind==='textarea') return true; // Culture
+  return false;
+}
+
+/* =========================================================
+   ETAT
+   ========================================================= */
+let world = emptyWorld();
+let currentType = '__home__';
+let currentId = null;
+let detailMode = 'view'; // 'view' (par défaut, style article) ou 'edit' (formulaire)
+let listSearchTerm = '';
+let listSortBy = 'nom'; // 'nom' ou 'id'
+let dirty = false;
+let currentFilename = 'monde.json';
+
+function emptyWorld(){
+  const w = {};
+  TYPE_ORDER.forEach(t=>w[t]={});
+  w.notes = '';
+  return w;
+}
+
+/* =========================================================
+   UTILITAIRES
+   ========================================================= */
+function getPath(obj, path){ return path.split('.').reduce((o,k)=> (o? o[k] : undefined), obj); }
+function setPath(obj, path, val){
+  const parts = path.split('.');
+  let o = obj;
+  for(let i=0;i<parts.length-1;i++){ if(!o[parts[i]]) o[parts[i]]={}; o = o[parts[i]]; }
+  o[parts[parts.length-1]] = val;
+}
+function stripAccents(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+/* Ids en PREFIXE_0001, incrémentaux, à partir du plus grand numéro existant dans la collection. */
+function generateId(type, coll){
+  const prefix = TYPE_META[type].prefix;
+  let max = 0;
+  const rx = new RegExp('^'+prefix+'_(\\d+)$');
+  Object.keys(coll).forEach(k=>{
+    const m = k.match(rx);
+    if(m){ const n=parseInt(m[1],10); if(n>max) max=n; }
+  });
+  const next = max+1;
+  return prefix+'_'+String(next).padStart(4,'0');
+}
+function escapeRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+function labelSpan(t){ const s=document.createElement('span'); s.className='inline-label'; s.textContent=t; return s; }
+function resolveLabel(id){
+  if(!id) return '';
+  for(const t of TYPE_ORDER){
+    const coll = world[t]||{};
+    if(coll[id]) return coll[id].nom || id;
+  }
+  return id;
+}
+function resolveTypedRef(v, sources){
+  if(!v) return null;
+  for(const src of sources){ if((world[src]||{})[v]) return v; }
+  const lower = v.toLowerCase();
+  for(const src of sources){
+    const coll = world[src]||{};
+    for(const id in coll){ if((coll[id].nom||'').toLowerCase()===lower) return id; }
+  }
+  return null;
+}
+function isRegionCoordPattern(v){
+  return /^[A-J](1[0-4]|[1-9])$/i.test(v) || v==='XX' || v==='??';
+}
+function findRecordAnywhere(id){
+  for(const t of TYPE_ORDER){ if((world[t]||{})[id]) return t; }
+  return null;
+}
+/* Cherche une fiche par NOM exact (insensible à la casse), tous types confondus — utilisé
+   par les liens narratifs [[Nom]], puisqu'un lien de texte libre ne connaît pas de "sources". */
+function resolveByName(nom){
+  const lower = (nom||'').trim().toLowerCase();
+  if(!lower) return null;
+  for(const t of TYPE_ORDER){
+    const coll = world[t]||{};
+    for(const id in coll){ if((coll[id].nom||'').trim().toLowerCase()===lower) return {type:t, id}; }
+  }
+  return null;
+}
+const WIKILINK_RE = /\[\[([^\]]+)\]\]/g;
+/* [[Nom]] ou [[Nom|Texte affiché]] */
+function parseWikiLinkRaw(raw){
+  const parts = raw.split('|');
+  const lookupName = parts[0].trim();
+  const displayText = (parts.length>1 ? parts[1] : parts[0]).trim();
+  return { lookupName, displayText };
+}
+function makeWikiTextLink(raw){
+  const { lookupName, displayText } = parseWikiLinkRaw(raw);
+  const found = resolveByName(lookupName);
+  const a = document.createElement('a'); a.href='#'; a.textContent = displayText || lookupName;
+  if(found){
+    a.className='wiki-link';
+    a.onclick = (e)=>{ e.preventDefault(); currentType=found.type; currentId=found.id; detailMode='view'; renderSidebar(); renderList(); renderDetail(); };
+  } else {
+    a.className='wiki-link missing';
+    a.title = "Cette fiche n'existe pas encore \u2014 cliquer pour la créer";
+    a.onclick = (e)=>{ e.preventDefault(); openTypePickerForName(lookupName); };
+  }
+  return a;
+}
+/* Rendu inline combiné : [[liens wiki]], texte en gras/italique, code — dans une seule passe
+   pour ne jamais laisser un marqueur mal interprété. */
+const INLINE_MD_RE = /\[\[([^\]]+)\]\]|\*\*([^*]+)\*\*|\*([^*]+)\*|_([^_]+)_|`([^`]+)`/g;
+function renderInlineMarkdown(container, text){
+  if(!text) return;
+  const re = new RegExp(INLINE_MD_RE.source, 'g');
+  let lastIndex = 0, match;
+  while((match = re.exec(text)) !== null){
+    if(match.index > lastIndex) container.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+    if(match[1]!==undefined){ container.appendChild(makeWikiTextLink(match[1])); }
+    else if(match[2]!==undefined){ const el=document.createElement('strong'); el.textContent=match[2]; container.appendChild(el); }
+    else if(match[3]!==undefined){ const el=document.createElement('em'); el.textContent=match[3]; container.appendChild(el); }
+    else if(match[4]!==undefined){ const el=document.createElement('em'); el.textContent=match[4]; container.appendChild(el); }
+    else if(match[5]!==undefined){ const el=document.createElement('code'); el.textContent=match[5]; container.appendChild(el); }
+    lastIndex = re.lastIndex;
+  }
+  if(lastIndex < text.length) container.appendChild(document.createTextNode(text.slice(lastIndex)));
+}
+/* Rend un texte narratif : markdown léger (gras, italique, code, listes à puces) + [[liens wiki]],
+   avec les sauts de ligne préservés. Le conteneur passé doit pouvoir contenir du contenu de bloc
+   (utiliser un <div>, pas un <p>, si des listes sont possibles). */
+function renderNarrativeText(container, text){
+  if(!text) return;
+  const lines = String(text).split('\n');
+  let currentList = null;
+  let firstLine = true;
+  lines.forEach(line=>{
+    const listMatch = line.match(/^\s*[-*]\s+(.*)$/);
+    if(listMatch){
+      if(!currentList){ currentList = document.createElement('ul'); currentList.className='narrative-ul'; container.appendChild(currentList); }
+      const li = document.createElement('li');
+      renderInlineMarkdown(li, listMatch[1]);
+      currentList.appendChild(li);
+      firstLine = false;
+      return;
+    }
+    currentList = null;
+    if(!firstLine) container.appendChild(document.createElement('br'));
+    renderInlineMarkdown(container, line);
+    firstLine = false;
+  });
+}
+/* Modale : la fiche ciblée par un [[lien]] n'existe pas encore — on choisit son type puis on la crée. */
+function openTypePickerForName(nom){
+  const content = document.createElement('div');
+  const h = document.createElement('h3'); h.textContent = 'Créer « '+nom+' » en tant que\u2026';
+  content.appendChild(h);
+  const grid = document.createElement('div'); grid.style.cssText='display:flex; flex-wrap:wrap; gap:8px; margin:12px 0;';
+  TYPE_ORDER.filter(t=>t!=='regions').forEach(t=>{
+    const btn = document.createElement('button'); btn.type='button'; btn.className='btn-small';
+    btn.textContent = TYPE_META[t].singular;
+    btn.onclick = ()=>{
+      const id = generateId(t, world[t]);
+      const rec = { id, nom };
+      ensureRecordDefaults(t, id, rec);
+      world[t][id] = rec;
+      attachGenesisEvent(t, rec);
+      markDirty(); closeModal();
+      currentType=t; currentId=id; detailMode='edit';
+      renderSidebar(); renderList(); renderDetail();
+    };
+    grid.appendChild(btn);
+  });
+  content.appendChild(grid);
+  const actions = document.createElement('div'); actions.className='modal-actions';
+  const cancel = document.createElement('button'); cancel.textContent='Annuler'; cancel.onclick=closeModal;
+  actions.appendChild(cancel);
+  content.appendChild(actions);
+  showModal(content);
+}
+/* Recherche libre par nom (tous types, sauf Région dont l'id n'est pas un nom) — utilisée par
+   l'autocomplétion des liens [[...]] pendant la frappe. */
+function searchEntitiesByName(query){
+  const q = (query||'').trim().toLowerCase();
+  const results = [];
+  TYPE_ORDER.forEach(t=>{
+    if(t==='regions') return;
+    Object.values(world[t]||{}).forEach(r=>{
+      if(!r.nom) return;
+      if(q==='' || r.nom.toLowerCase().includes(q)) results.push({ type:t, id:r.id, nom:r.nom });
+    });
+  });
+  results.sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));
+  return results.slice(0,8);
+}
+/* Attache une autocomplétion à une textarea narrative : dès qu'on tape "[[", propose des fiches
+   existantes ; cliquer une suggestion complète le lien avec "]]". */
+/* Fait grandir une textarea pour toujours montrer tout son contenu, sans barre de défilement interne. */
+function autoGrowTextarea(ta){
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+function attachWikiLinkAutocomplete(ta){
+  let dropdown = null;
+  function closeDropdown(){ if(dropdown){ dropdown.remove(); dropdown=null; } }
+  function getOpenLink(){
+    const pos = ta.selectionStart;
+    const before = ta.value.slice(0, pos);
+    const openIdx = before.lastIndexOf('[[');
+    if(openIdx===-1) return null;
+    const between = before.slice(openIdx+2);
+    if(between.includes(']]') || between.includes('\n')) return null;
+    return { query: between, openIdx };
+  }
+  function render(){
+    const info = getOpenLink();
+    if(!info){ closeDropdown(); return; }
+    const matches = searchEntitiesByName(info.query);
+    if(!dropdown){
+      dropdown = document.createElement('div'); dropdown.className='wikilink-autocomplete';
+      ta.parentNode.insertBefore(dropdown, ta.nextSibling);
+    }
+    dropdown.innerHTML='';
+    if(matches.length===0){
+      const empty = document.createElement('div'); empty.className='wikilink-ac-empty';
+      empty.textContent = info.query ? ('Aucune fiche « '+info.query+' » — proposée à la création au clic sur le lien') : 'Tapez pour chercher une fiche\u2026';
+      dropdown.appendChild(empty);
+      return;
+    }
+    matches.forEach(m=>{
+      const item = document.createElement('div'); item.className='wikilink-ac-item';
+      const nameSpan = document.createElement('span'); nameSpan.textContent = m.nom;
+      const typeSpan = document.createElement('span'); typeSpan.className='wikilink-ac-type'; typeSpan.textContent = TYPE_META[m.type].singular;
+      item.append(nameSpan, typeSpan);
+      item.onmousedown = (e)=>{
+        e.preventDefault();
+        const val = ta.value;
+        const before = val.slice(0, info.openIdx+2);
+        const after = val.slice(info.openIdx+2+info.query.length);
+        const insertion = m.nom+']]';
+        ta.value = before+insertion+after;
+        const newPos = (before+insertion).length;
+        ta.setSelectionRange(newPos, newPos);
+        ta.dispatchEvent(new Event('input', {bubbles:true}));
+        closeDropdown();
+        ta.focus();
+      };
+      dropdown.appendChild(item);
+    });
+  }
+  ta.addEventListener('input', render);
+  ta.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDropdown(); });
+  ta.addEventListener('blur', ()=> setTimeout(closeDropdown, 150));
+}
+/* Types d'entités "basiques" (id, timeline, attributs.*) dont le texte narratif est scanné pour
+   les liens [[...]] — sert au calcul des Pages liées. */
+function gatherNarrativeTexts(type, record){
+  const texts = [];
+  const resumePath = (type==='events'||type==='regions') ? 'resume' : 'attributs.resume';
+  const resumeVal = getPath(record, resumePath);
+  if(resumeVal) texts.push(resumeVal);
+  const desc = record.description;
+  if(typeof desc==='string') texts.push(desc);
+  else if(desc && typeof desc==='object') Object.values(desc).forEach(v=>{ if(v) texts.push(v); });
+  const anecdotesPath = (type==='events'||type==='regions') ? 'anecdotes' : 'attributs.anecdotes';
+  (getPath(record, anecdotesPath)||[]).forEach(v=>{ if(v) texts.push(v); });
+  if(type!=='alignements'){
+    (getPath(record, customSectionsPath(type))||[]).forEach(s=>{ if(s.contenu) texts.push(s.contenu); });
+  }
+  return texts;
+}
+function extractWikiLinkIds(texts){
+  const ids = [];
+  texts.forEach(text=>{
+    const re = new RegExp(WIKILINK_RE.source, 'g');
+    let m;
+    while((m = re.exec(text)) !== null){
+      const { lookupName } = parseWikiLinkRaw(m[1]);
+      const found = resolveByName(lookupName);
+      if(found) ids.push(found.id);
+    }
+  });
+  return ids;
+}
+/* Choisit dans quel type créer une fiche manquante, en fonction des sources possibles du champ. */
+function pickCreationType(sources, idHint){
+  if(!sources || sources.length===0) return null;
+  if(idHint && sources.includes('regions') && isRegionCoordPattern(idHint)) return 'regions';
+  const nonRegion = sources.find(s=>s!=='regions');
+  return nonRegion || sources[0];
+}
+/* Verbe d'ouverture de fiche selon le type — sert à nommer l'Event de départ créé automatiquement.
+   Absent de la liste = pas de timeline affichée pour ce type (especes, regions) -> pas d'event auto. */
+const GENESIS_VERB = {
+  personnages: 'Naissance',
+  lieux: 'Fondation',
+  groupes: 'Fondation',
+  reliques: 'Création',
+  periodes: 'Début',
+  cultures: 'Apparition',
+  materiaux: 'Découverte',
+  objets: 'Invention',
+};
+/* À la création d'une fiche (tout type sauf Event, Espece et Région), crée aussi l'Event qui
+   marque son commencement (« Naissance de X », « Fondation de X »…) et l'utilise comme première
+   période de sa timeline — pour ne jamais avoir à créer cet Event séparément à la main. */
+function attachGenesisEvent(type, rec){
+  const verb = GENESIS_VERB[type];
+  if(!verb) return;
+  if(!rec.timeline || rec.timeline.length>0) return;
+  const evtId = generateId('events', world.events);
+  const evt = {
+    id: evtId,
+    date: {L:'?', l:'?'},
+    nom: verb+' de '+(rec.nom||rec.id),
+    ordre: 1,
+    marquant: false,
+    lieu: (type==='lieux') ? rec.id : null,
+    characters: (type==='personnages') ? [rec.id] : [],
+    tags: [],
+    anecdotes: [],
+  };
+  world.events[evtId] = evt;
+  rec.timeline = [{ debut: evtId, fin: null }];
+}
+function createStubGeneric(type, nom){
+  const id = generateId(type, world[type]);
+  const rec = { id, nom };
+  ensureRecordDefaults(type, id, rec);
+  world[type][id] = rec;
+  attachGenesisEvent(type, rec);
+  markDirty();
+  renderSidebar();
+  return id;
+}
+function createStubRegion(coordId){
+  const id = coordId.toUpperCase()==='XX' ? 'XX' : (coordId==='??' ? '??' : coordId.toUpperCase());
+  if(world.regions[id]) return id;
+  const rec = { id, nom:id };
+  if(id!=='XX' && id!=='??'){ rec.abs = id[0]; rec.ord = parseInt(id.slice(1),10); }
+  ensureRecordDefaults('regions', id, rec);
+  world.regions[id] = rec;
+  markDirty();
+  renderSidebar();
+  return id;
+}
+/* Crée une fiche stub à la volée en RÉUTILISANT l'id exact déjà référencé ailleurs
+   (cas d'un lien rouge / référence pendante trouvée en mode lecture). */
+function createStubWithExactId(type, id){
+  if(world[type][id]) return id;
+  const rec = { id, nom:'' };
+  ensureRecordDefaults(type, id, rec);
+  world[type][id] = rec;
+  attachGenesisEvent(type, rec);
+  markDirty();
+  renderSidebar();
+  return id;
+}
+/* Résout une saisie (id existant, nom existant), ou CRÉE la fiche manquante à la volée
+   (nouvel id généré à partir du texte tapé) — on n'a plus besoin de pré-créer les fiches
+   avant de les référencer, seulement de les remplir ensuite. */
+function resolveOrCreateRef(v, sources){
+  if(!v) return null;
+  const existing = resolveTypedRef(v, sources);
+  if(existing) return existing;
+  if(sources.includes('regions') && isRegionCoordPattern(v)) return createStubRegion(v);
+  const creatable = sources.find(s=>s!=='regions');
+  if(creatable) return createStubGeneric(creatable, v);
+  return null;
+}
+
+/* =========================================================
+   NORMALISATION / DEFAUTS
+   ========================================================= */
+function ensureRecordDefaults(type, key, r){
+  r.id = r.id || key;
+  r.nom = r.nom || '';
+
+  if(type==='events'){
+    r.date = r.date || {L:'?', l:'?'};
+    if(r.date.L===undefined || r.date.L===null) r.date.L='?';
+    if(r.date.l===undefined || r.date.l===null) r.date.l='?';
+    r.ordre = (r.ordre===undefined||r.ordre===null) ? 1 : r.ordre;
+    r.marquant = !!r.marquant;
+    r.lieu = (r.lieu===undefined) ? null : r.lieu;
+    r.characters = r.characters || [];
+    r.resume = r.resume || '';
+    r.tags = r.tags || [];
+    r.titres_honorifiques = r.titres_honorifiques || [];
+    r.anecdotes = r.anecdotes || [];
+    r.sections = r.sections || [];
+    return;
+  }
+  if(type==='regions'){
+    r.resume = r.resume || '';
+    r.tags = r.tags || [];
+    r.titres_honorifiques = r.titres_honorifiques || [];
+    r.anecdotes = r.anecdotes || [];
+    r.sections = r.sections || [];
+    return;
+  }
+  if(type==='alignements'){
+    return; // entité basique : rien au-delà de id + nom, déjà posés plus haut
+  }
+  r.type = r.type || type.slice(0,-1);
+  r.timeline = r.timeline || [];
+  r.attributs = r.attributs || {};
+  r.attributs.resume = r.attributs.resume || '';
+  r.attributs.tags = r.attributs.tags || [];
+  r.attributs.titres_honorifiques = r.attributs.titres_honorifiques || [];
+  r.attributs.anecdotes = r.attributs.anecdotes || [];
+  r.attributs.sections = r.attributs.sections || [];
+  r.description = (r.description===undefined) ? (type==='cultures' ? '' : {}) : r.description;
+
+  if(type==='personnages'){
+    r.genre = r.genre || '??';
+    r.puissance = (r.puissance===undefined||r.puissance===null) ? 0 : r.puissance;
+    r.especes = r.especes || [];
+    r.alignements = r.alignements || [];
+    r.roles = r.roles || [];
+    r.liste_victimes = r.liste_victimes || [];
+    r.tue_par = r.tue_par || [];
+    r.attributs.formes = r.attributs.formes || [];
+    r.attributs.photo = r.attributs.photo || '';
+  }
+  if(type==='lieux'){
+    r.type_lieu = r.type_lieu || '';
+    r.altitude = r.altitude || [];
+    r.regions = r.regions || [];
+    r.situe_dans = (r.situe_dans===undefined) ? null : r.situe_dans;
+    r.habitants = r.habitants || [];
+  }
+  if(type==='groupes'){
+    r.formel = !!r.formel;
+    r.membres = r.membres || [];
+  }
+  if(type==='reliques'){
+    r.est_unique = !!r.est_unique;
+    r.createurs = r.createurs || [];
+    r.evenement_creation = (r.evenement_creation===undefined) ? null : r.evenement_creation;
+    r.materiaux = r.materiaux || [];
+    r.proprietaires = r.proprietaires || [];
+  }
+  if(type==='periodes'){
+    r.lieu = (r.lieu===undefined) ? null : r.lieu;
+    r.affecte = r.affecte || [];
+  }
+  if(type==='materiaux'){
+    r.est_organique = !!r.est_organique;
+    r.est_rare = !!r.est_rare;
+    r.porteur_de_chant = !!r.porteur_de_chant;
+  }
+  if(type==='objets'){
+    r.materiaux = r.materiaux || [];
+    r.inventeurs = r.inventeurs || [];
+  }
+  if(type==='especes'){
+    r.attributs.formes = r.attributs.formes || [];
+    r.organisations = r.organisations || [];
+    r.organisations.forEach(o=>{
+      o.type_organisation = o.type_organisation||'';
+      if(typeof o.source === 'string'){ o.source = { type:'groupe', id:o.source }; }
+      else if(!o.source || typeof o.source!=='object'){ o.source = { type:'groupe', id:'' }; }
+      else { o.source.type = o.source.type || 'groupe'; o.source.id = o.source.id || ''; }
+      o.timeline = o.timeline || [];
+    });
+  }
+}
+function normalizeWorld(data){
+  const w = emptyWorld();
+  w.notes = (data && typeof data.notes==='string') ? data.notes : '';
+  TYPE_ORDER.forEach(t=>{
+    const src = data && data[t];
+    if(src && typeof src==='object'){
+      Object.keys(src).forEach(k=>{
+        const rec = src[k] || {};
+        ensureRecordDefaults(t,k,rec);
+        w[t][k] = rec;
+      });
+    }
+  });
+  return w;
+}
+
+/* =========================================================
+   RENDU — SIDEBAR / LISTE
+   ========================================================= */
+function renderSidebar(){
+  const nav = document.getElementById('sidebar');
+  nav.innerHTML = '';
+  const homeBtn = document.createElement('button');
+  homeBtn.className = 'side-item'+(currentType==='__home__'?' active':'');
+  const hIcon = document.createElement('span'); hIcon.className='side-icon'; hIcon.textContent='\u2302';
+  const hLabel = document.createElement('span'); hLabel.className='side-label'; hLabel.textContent='Accueil';
+  homeBtn.append(hIcon, hLabel);
+  homeBtn.onclick = ()=>{ currentType='__home__'; currentId=null; renderSidebar(); renderList(); renderDetail(); };
+  nav.appendChild(homeBtn);
+  const sep0 = document.createElement('div'); sep0.style.cssText='border-top:1px solid var(--border-light); margin:10px 0;';
+  nav.appendChild(sep0);
+  TYPE_ORDER.forEach(t=>{
+    const btn = document.createElement('button');
+    btn.className = 'side-item'+(t===currentType?' active':'');
+    const count = Object.keys(world[t]||{}).length;
+    const iconSpan = document.createElement('span'); iconSpan.className='side-icon'; iconSpan.textContent=TYPE_META[t].icon;
+    const labelSpanEl = document.createElement('span'); labelSpanEl.className='side-label'; labelSpanEl.textContent=TYPE_META[t].label;
+    const countSpan = document.createElement('span'); countSpan.className='side-count'; countSpan.textContent=count;
+    btn.append(iconSpan, labelSpanEl, countSpan);
+    btn.onclick = ()=>{ currentType=t; currentId=null; detailMode='view'; listSearchTerm=''; renderSidebar(); renderList(); renderDetail(); };
+    nav.appendChild(btn);
+  });
+  const sep = document.createElement('div'); sep.style.cssText='border-top:1px solid var(--border-light); margin:10px 0;';
+  nav.appendChild(sep);
+  const notesBtn = document.createElement('button');
+  notesBtn.className = 'side-item'+(currentType==='__notes__'?' active':'');
+  const nIcon = document.createElement('span'); nIcon.className='side-icon'; nIcon.textContent='\u270E';
+  const nLabel = document.createElement('span'); nLabel.className='side-label'; nLabel.textContent='Bloc-notes';
+  notesBtn.append(nIcon, nLabel);
+  notesBtn.onclick = ()=>{ currentType='__notes__'; currentId=null; renderSidebar(); renderList(); renderDetail(); };
+  nav.appendChild(notesBtn);
+}
+
+function renderList(){
+  const panel = document.getElementById('listPanel');
+  panel.innerHTML = '';
+  if(currentType==='__home__'){
+    const h = document.createElement('h2'); h.style.fontFamily='var(--font-heading)'; h.style.fontWeight='400'; h.textContent='Accueil';
+    const p = document.createElement('p'); p.className='empty-hint';
+    p.textContent = "Vue d'ensemble de toutes les fiches du monde et de leur niveau de remplissage.";
+    panel.append(h, p);
+    return;
+  }
+  if(currentType==='__notes__'){
+    const h = document.createElement('h2'); h.style.fontFamily='var(--font-heading)'; h.style.fontWeight='400'; h.textContent='Bloc-notes';
+    const p = document.createElement('p'); p.className='empty-hint';
+    p.textContent = "Un espace libre pour vos idées, en vrac — sauvegardé avec le monde, mais indépendant des fiches.";
+    panel.append(h, p);
+    return;
+  }
+  const header = document.createElement('div'); header.className='list-header';
+  const h = document.createElement('h2'); h.textContent = TYPE_META[currentType].label;
+  const newBtn = document.createElement('button'); newBtn.className='btn-primary'; newBtn.textContent='+ Nouveau';
+  newBtn.onclick = ()=> openCreateModal(currentType);
+  header.append(h, newBtn);
+  if(currentType==='regions'){
+    const gridBtn = document.createElement('button'); gridBtn.className='btn-primary'; gridBtn.textContent='Générer A1→J14';
+    gridBtn.title = 'Crée toutes les régions manquantes de la grille (A-J × 1-14)';
+    gridBtn.onclick = generateFullRegionGrid;
+    header.appendChild(gridBtn);
+  }
+  if(currentType==='events'){
+    const marquantBtn = document.createElement('button'); marquantBtn.className='btn-primary'; marquantBtn.textContent='Générer les marquants 1.1→8.12';
+    marquantBtn.title = 'Crée un événement marquant vide pour chaque date manquante entre 1.1 et 8.12, à compléter ensuite';
+    marquantBtn.onclick = generateMarquantEventsGrid;
+    header.appendChild(marquantBtn);
+  }
+  const search = document.createElement('input'); search.className='search-input'; search.placeholder='Rechercher (nom, tag, id)…';
+  search.value = listSearchTerm;
+  search.oninput = ()=>{ listSearchTerm = search.value; renderListItems(itemsWrap); };
+  const sortRow = document.createElement('div'); sortRow.className='sort-row';
+  const sortLabel = document.createElement('span'); sortLabel.className='inline-label'; sortLabel.textContent='Trier par';
+  const sortSelect = document.createElement('select'); sortSelect.className='sort-select';
+  [['nom','Nom'],['id','ID']].forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; if(v===listSortBy) o.selected=true; sortSelect.appendChild(o); });
+  sortSelect.onchange = ()=>{ listSortBy = sortSelect.value; renderListItems(itemsWrap); };
+  sortRow.append(sortLabel, sortSelect);
+  panel.append(header, search, sortRow);
+  const itemsWrap = document.createElement('div'); itemsWrap.className='items-wrap';
+  panel.appendChild(itemsWrap);
+  renderListItems(itemsWrap);
+}
+function renderListItems(wrap){
+  wrap.innerHTML = '';
+  const coll = world[currentType]||{};
+  const term = (listSearchTerm||'').toLowerCase();
+  const entries = Object.values(coll).filter(r=>{
+    if(!term) return true;
+    const tags = (r.tags || (r.attributs&&r.attributs.tags) || []).join(' ').toLowerCase();
+    return (r.nom||'').toLowerCase().includes(term) || (r.id||'').toLowerCase().includes(term) || tags.includes(term);
+  }).sort((a,b)=> listSortBy==='id' ? (a.id||'').localeCompare(b.id||'','fr',{numeric:true}) : (a.nom||'').localeCompare(b.nom||'','fr'));
+  if(entries.length===0){ wrap.innerHTML = '<p class="empty-hint">Aucun élément.</p>'; return; }
+  entries.forEach(r=>{
+    const item = document.createElement('button');
+    item.className = 'list-item'+(r.id===currentId?' active':'');
+    const nomSpan = document.createElement('span'); nomSpan.className='li-nom'; nomSpan.textContent = r.nom || '(sans nom)';
+    const idSpan = document.createElement('span'); idSpan.className='li-id idbadge'; idSpan.textContent = r.id;
+    item.append(nomSpan, idSpan);
+    item.onclick = ()=>{ currentId = r.id; detailMode='view'; renderList(); renderDetail(); };
+    wrap.appendChild(item);
+  });
+}
+
+/* =========================================================
+   RENDU — DETAIL
+   ========================================================= */
+function emptyStateHtml(){
+  return '<div class="empty-state"><p>Sélectionnez un élément dans la liste, ou créez-en un nouveau.</p></div>';
+}
+function clearDynDatalists(){ document.querySelectorAll('.dyn-datalist').forEach(e=>e.remove()); }
+
+function renderDetail(){
+  const headerEl = document.getElementById('detailHeader');
+  const bodyEl = document.getElementById('detailBody');
+  headerEl.innerHTML = '';
+  bodyEl.innerHTML = '';
+  clearDynDatalists();
+  if(currentType==='__home__'){ renderHomepage(); return; }
+  if(currentType==='__notes__'){ renderNotes(); return; }
+  if(!currentId){ bodyEl.innerHTML = emptyStateHtml(); return; }
+  const coll = world[currentType];
+  const record = coll ? coll[currentId] : null;
+  if(!record){ currentId=null; bodyEl.innerHTML = emptyStateHtml(); return; }
+  if(detailMode==='edit') renderDetailEdit(record); else renderDetailView(record);
+}
+/* ---------- Accueil : liste de toutes les fiches + % de remplissage ---------- */
+function isFieldFilled(record, def){
+  const val = getPath(record, def.key);
+  switch(def.kind){
+    case 'text': case 'textarea': case 'select': case 'lead': case 'image':
+      return !!(val && String(val).trim());
+    case 'number':
+      return val!==null && val!==undefined && val!=='';
+    case 'tags': case 'int-list': case 'ref-list': case 'narrative-list': case 'personnage-formes':
+      return Array.isArray(val) && val.length>0;
+    case 'ref':
+      return !!val;
+    case 'timeline':
+      return Array.isArray(val) && val.length>0 && val.some(p=>p.debut);
+    case 'roles': case 'alignements': case 'membres': case 'tuepar': case 'affecte': case 'espece-orgs':
+      return Array.isArray(val) && val.length>0;
+    case 'description':
+      if(typeof val==='string') return val.trim().length>0;
+      if(val && typeof val==='object') return Object.values(val).some(v=>v && String(v).trim());
+      return false;
+    default:
+      return false; // boolean, habitants (dérivé), date : pas de notion de "vide", exclus du score
+  }
+}
+function computeCompletion(type, record){
+  const spec = (FORM_SPEC[type]||[]).filter(d=> d.kind!=='habitants' && d.kind!=='date' && d.kind!=='boolean');
+  if(spec.length===0) return 100;
+  const filled = spec.filter(d=>isFieldFilled(record,d)).length;
+  return Math.round(100*filled/spec.length);
+}
+const HOME_EXCLUDED_TYPES = ['regions','alignements','events'];
+function renderHomepage(){
+  const panel = document.getElementById('detailBody');
+  panel.innerHTML = '';
+  const wrap = document.createElement('div'); wrap.className='wiki-page';
+  const h1 = document.createElement('h1'); h1.className='wiki-title'; h1.textContent='Accueil';
+  const subtitle = document.createElement('div'); subtitle.className='wiki-subtitle';
+  subtitle.textContent = 'Quelques pages au hasard pour se promener dans le monde.';
+  wrap.append(h1, subtitle);
+  const rule = document.createElement('div'); rule.className='wiki-title-rule';
+  wrap.appendChild(rule);
+
+  const pool = [];
+  TYPE_ORDER.forEach(t=>{
+    if(HOME_EXCLUDED_TYPES.includes(t)) return;
+    Object.values(world[t]||{}).forEach(record=>{ pool.push({type:t, record}); });
+  });
+
+  if(pool.length===0){
+    const p = document.createElement('p'); p.className='empty-hint'; p.textContent='Le monde est vide — créez votre première fiche depuis la barre latérale.';
+    wrap.appendChild(p);
+    panel.appendChild(wrap);
+    return;
+  }
+
+  const section = document.createElement('section'); section.className='wiki-section';
+  const h2 = document.createElement('h2'); h2.textContent='10 pages au hasard';
+  const reshuffleBtn = document.createElement('button'); reshuffleBtn.type='button'; reshuffleBtn.className='btn-small'; reshuffleBtn.textContent='\u{1F500} Nouvelle sélection';
+  reshuffleBtn.style.marginBottom='10px';
+  reshuffleBtn.onclick = ()=> renderHomepage();
+  const ul = document.createElement('ul'); ul.className='view-list';
+  const picked = pool.slice().sort(()=>Math.random()-0.5).slice(0,10);
+  picked.forEach(({type, record})=>{
+    const li = document.createElement('li');
+    li.appendChild(document.createTextNode('['+TYPE_META[type].singular+'] '));
+    const a = document.createElement('a'); a.href='#'; a.className='wiki-link'; a.textContent = record.nom || '(sans nom)';
+    a.onclick = (e)=>{ e.preventDefault(); currentType=type; currentId=record.id; detailMode='view'; renderSidebar(); renderList(); renderDetail(); };
+    li.appendChild(a);
+    ul.appendChild(li);
+  });
+  section.append(h2, reshuffleBtn, ul);
+  wrap.appendChild(section);
+  panel.appendChild(wrap);
+}
+function renderNotes(){
+  const panel = document.getElementById('detailBody');
+  const wrap = document.createElement('div'); wrap.className='wiki-page';
+  const h1 = document.createElement('h1'); h1.className='wiki-title'; h1.textContent='Bloc-notes';
+  const subtitle = document.createElement('div'); subtitle.className='wiki-subtitle';
+  subtitle.textContent = 'Espace libre — sauvegardé avec le monde, indépendant des fiches.';
+  wrap.append(h1, subtitle);
+  const rule = document.createElement('div'); rule.className='wiki-title-rule';
+  wrap.appendChild(rule);
+  const ta = document.createElement('textarea');
+  ta.value = world.notes || '';
+  ta.rows = 26;
+  ta.style.cssText = 'width:100%; font-family:var(--font-mono); font-size:.85rem; line-height:1.7;';
+  ta.placeholder = 'Idées en vrac, à trier plus tard…';
+  ta.oninput = ()=>{ world.notes = ta.value; markDirty(); };
+  wrap.appendChild(ta);
+  panel.appendChild(wrap);
+}
+
+/* ---------- Mode LECTURE (par défaut) : page façon Wikipedia ---------- */
+function renderDetailView(record){
+  const headerEl = document.getElementById('detailHeader');
+  const bodyEl = document.getElementById('detailBody');
+
+  const headerRow = document.createElement('div'); headerRow.className='wiki-header-row';
+  const titleBlock = document.createElement('div');
+  const h1 = document.createElement('h1'); h1.className='wiki-title'; h1.textContent = record.nom || '(sans nom)';
+  const subtitle = document.createElement('div'); subtitle.className='wiki-subtitle';
+  subtitle.textContent = TYPE_META[currentType].singular+' · '+record.id;
+  titleBlock.append(h1, subtitle);
+
+  const actions = document.createElement('div'); actions.className='wiki-actions';
+  const editBtn = document.createElement('button'); editBtn.className='btn-edit-toggle'; editBtn.textContent='Modifier';
+  editBtn.onclick = ()=>{ detailMode='edit'; renderDetail(); };
+  const delBtn = document.createElement('button'); delBtn.className='btn-danger'; delBtn.textContent='Supprimer';
+  delBtn.onclick = ()=> confirmDelete(currentType, currentId);
+  actions.append(editBtn, delBtn);
+
+  headerRow.append(titleBlock, actions);
+  headerEl.appendChild(headerRow);
+  const rule = document.createElement('div'); rule.className='wiki-title-rule';
+  headerEl.appendChild(rule);
+
+  const wrap = document.createElement('div'); wrap.className='wiki-page';
+  const infobox = buildInfobox(currentType, record);
+  if(infobox) wrap.appendChild(infobox);
+
+  const fullSpec = FORM_SPEC[currentType]||[];
+  const leadDef = fullSpec.find(d=>d.kind==='lead');
+  if(leadDef){
+    const leadVal = getPath(record, leadDef.key);
+    if(leadVal){
+      const leadP = document.createElement('div'); leadP.className='wiki-lead prose';
+      renderNarrativeText(leadP, leadVal);
+      wrap.appendChild(leadP);
+    }
+  }
+
+  const body = document.createElement('div'); body.className='wiki-body';
+  const bodySpec = fullSpec.filter(isBodyOnlyField);
+  const mainDefs = bodySpec.filter(d=>d.kind!=='narrative-list' && d.kind!=='lead');
+  const anecdoteDefs = bodySpec.filter(d=>d.kind==='narrative-list');
+  renderSpecInto(body, record, mainDefs, 'view');
+  renderCustomSectionsView(body, currentType, record);
+  renderSpecInto(body, record, anecdoteDefs, 'view');
+  wrap.appendChild(body);
+
+  renderBacklinks(wrap, record.id);
+
+  bodyEl.appendChild(wrap);
+}
+
+/* ---------- Pages liées (backlinks) : qui référence cette fiche ailleurs dans le monde ---------- */
+function findBacklinks(targetId){
+  const results = [];
+  TYPE_ORDER.forEach(t=>{
+    Object.values(world[t]||{}).forEach(record=>{
+      if(record.id===targetId) return;
+      const refs = collectRefs(t, record);
+      const structuredHit = refs.some(r=>r.value===targetId);
+      const narrativeHit = !structuredHit && t!=='alignements' && extractWikiLinkIds(gatherNarrativeTexts(t, record)).includes(targetId);
+      if(structuredHit || narrativeHit){ results.push({type:t, record}); }
+    });
+  });
+  results.sort((a,b)=> TYPE_META[a.type].label.localeCompare(TYPE_META[b.type].label,'fr') || (a.record.nom||'').localeCompare(b.record.nom||'','fr'));
+  return results;
+}
+function renderBacklinks(container, targetId){
+  const links = findBacklinks(targetId);
+  const sec = document.createElement('section'); sec.className='wiki-section backlinks-section';
+  const h2 = document.createElement('h2'); h2.textContent='Pages liées';
+  sec.appendChild(h2);
+  if(links.length===0){
+    const p = document.createElement('p'); p.className='fact-line empty'; p.textContent='Aucune page ne pointe vers celle-ci pour le moment.';
+    sec.appendChild(p);
+    container.appendChild(sec);
+    return;
+  }
+  const LIMIT = 5;
+  const ul = document.createElement('ul'); ul.className='view-list';
+  sec.appendChild(ul);
+  let expanded = false;
+  function renderItems(){
+    ul.innerHTML='';
+    const visible = expanded ? links : links.slice(0, LIMIT);
+    visible.forEach(({type, record})=>{
+      const li = document.createElement('li');
+      li.appendChild(document.createTextNode('['+TYPE_META[type].singular+'] '));
+      const a = document.createElement('a'); a.href='#'; a.className='wiki-link'; a.textContent = record.nom || '(sans nom)';
+      a.onclick = (e)=>{ e.preventDefault(); currentType=type; currentId=record.id; detailMode='view'; renderSidebar(); renderList(); renderDetail(); };
+      li.appendChild(a);
+      ul.appendChild(li);
+    });
+  }
+  renderItems();
+  if(links.length > LIMIT){
+    const toggleBtn = document.createElement('button'); toggleBtn.type='button'; toggleBtn.className='btn-small backlinks-toggle';
+    toggleBtn.textContent = 'Voir plus ('+(links.length-LIMIT)+')';
+    toggleBtn.onclick = ()=>{
+      expanded = !expanded;
+      renderItems();
+      toggleBtn.textContent = expanded ? 'Voir moins' : ('Voir plus ('+(links.length-LIMIT)+')');
+    };
+    sec.appendChild(toggleBtn);
+  }
+  container.appendChild(sec);
+}
+
+/* ---------- Sections narratives libres (nom + contenu), ajoutables sur toute fiche ---------- */
+function customSectionsPath(type){
+  return (type==='events' || type==='regions') ? 'sections' : 'attributs.sections';
+}
+function renderCustomSectionsEdit(container, type, record){
+  if(type==='alignements') return; // entité basique : pas de sections libres
+  const path = customSectionsPath(type);
+  let arr = getPath(record, path);
+  if(!arr){ arr=[]; setPath(record, path, arr); }
+  const section = document.createElement('section'); section.className='field-section';
+  const h3 = document.createElement('h3'); h3.textContent='Sections narratives supplémentaires';
+  section.appendChild(h3);
+  const hint = document.createElement('p'); hint.className='field-hint';
+  hint.textContent = "Ajoutez des sections libres propres à cette fiche (ex. « Inventions » pour un inventeur, « Batailles » pour un stratège…). Markdown léger pris en charge : **gras**, *italique*, `code`, listes à puces (- item).";
+  section.appendChild(hint);
+  buildCustomSectionsEditor(section, arr, ()=>markDirty());
+  container.appendChild(section);
+}
+function buildCustomSectionsEditor(container, arr, onChange){
+  const wrap = document.createElement('div');
+  function render(){
+    wrap.innerHTML='';
+    arr.forEach((s,idx)=>{
+      const box = document.createElement('div'); box.className='sub-box';
+      const titleInput = document.createElement('input'); titleInput.type='text'; titleInput.placeholder='Titre de la section (ex. Inventions)'; titleInput.value=s.titre||''; titleInput.style.flex='1';
+      titleInput.oninput = ()=>{ s.titre=titleInput.value; onChange(); };
+      const rm = document.createElement('button'); rm.type='button'; rm.className='btn-small btn-danger'; rm.textContent='Supprimer la section';
+      rm.onclick = ()=>{ arr.splice(idx,1); onChange(); render(); };
+      const rowTop = document.createElement('div'); rowTop.className='sub-row';
+      rowTop.append(labelSpan('Titre'), titleInput, rm);
+      const contentTa = document.createElement('textarea'); contentTa.rows=5; contentTa.value=s.contenu||''; contentTa.style.width='100%';
+      contentTa.placeholder='Texte de la section…';
+      contentTa.oninput = ()=>{ s.contenu=contentTa.value; onChange(); };
+      contentTa.addEventListener('input', ()=>autoGrowTextarea(contentTa));
+      attachWikiLinkAutocomplete(contentTa);
+      box.append(rowTop, contentTa);
+      wrap.appendChild(box);
+    });
+  }
+  render();
+  const addBtn = document.createElement('button'); addBtn.type='button'; addBtn.className='btn-small'; addBtn.textContent='+ Ajouter une section narrative';
+  addBtn.onclick = ()=>{ arr.push({titre:'', contenu:''}); onChange(); render(); };
+  container.append(wrap, addBtn);
+}
+function renderCustomSectionsView(container, type, record){
+  if(type==='alignements') return;
+  const path = customSectionsPath(type);
+  const arr = getPath(record, path) || [];
+  arr.forEach(s=>{
+    if(!s.titre && !s.contenu) return;
+    const sec = document.createElement('section'); sec.className='wiki-section';
+    const h2 = document.createElement('h2'); h2.textContent = s.titre || '(section sans titre)';
+    const p = document.createElement('div'); p.className='prose';
+    if(s.contenu) renderNarrativeText(p, s.contenu); else p.textContent='—';
+    sec.append(h2, p);
+    container.appendChild(sec);
+  });
+}
+
+/* Rend une liste de champs (FORM_SPEC) dans un conteneur, en mode 'view' ou 'edit'.
+   Les champs consécutifs marqués compact:true (petits éléments : genre/puissance,
+   type de lieu/altitude, abscisse/ordonnée…) sont regroupés côte à côte sur une même ligne. */
+function renderSpecInto(container, record, spec, mode){
+  const sectionClass = mode==='edit' ? 'field-section' : 'wiki-section';
+  const headingTag = mode==='edit' ? 'h3' : 'h2';
+  let i=0;
+  while(i<spec.length){
+    const def = spec[i];
+    if(def.compact){
+      const group=[def];
+      let j=i+1;
+      while(j<spec.length && spec[j].compact){ group.push(spec[j]); j++; }
+      const row=document.createElement('div'); row.className=sectionClass+' field-row';
+      group.forEach(gdef=>{
+        const cell=document.createElement('div'); cell.className='field-cell';
+        const heading=document.createElement(headingTag); heading.textContent=gdef.label;
+        cell.appendChild(heading);
+        if(gdef.hint){ const hint=document.createElement('p'); hint.className='field-hint'; hint.textContent=gdef.hint; cell.appendChild(hint); }
+        if(mode==='edit') buildField(cell, record, gdef); else renderFieldView(cell, record, gdef);
+        row.appendChild(cell);
+      });
+      container.appendChild(row);
+      i=j;
+    } else {
+      const section=document.createElement('section'); section.className=sectionClass;
+      const heading=document.createElement(headingTag); heading.textContent=def.label;
+      section.appendChild(heading);
+      if(def.hint){ const hint=document.createElement('p'); hint.className='field-hint'; hint.textContent=def.hint; section.appendChild(hint); }
+      if(mode==='edit') buildField(section, record, def); else renderFieldView(section, record, def);
+      container.appendChild(section);
+      i++;
+    }
+  }
+}
+
+/* ---------- Mode EDITION : formulaire ---------- */
+function renderDetailEdit(record){
+  const headerEl = document.getElementById('detailHeader');
+  const bodyEl = document.getElementById('detailBody');
+  const article = document.createElement('article'); article.className='record-article';
+  const header = document.createElement('div'); header.className='record-header';
+  const idBadge = document.createElement('span'); idBadge.className='idbadge'; idBadge.textContent=record.id;
+  const titleInput = document.createElement('input'); titleInput.className='title-input'; titleInput.value = record.nom||'';
+  titleInput.oninput = ()=>{ record.nom = titleInput.value; markDirty(); const iw=document.querySelector('.items-wrap'); if(iw) renderListItems(iw); };
+  const readBtn = document.createElement('button'); readBtn.className='btn-edit-toggle'; readBtn.textContent='Lire l\u2019article';
+  readBtn.onclick = ()=>{ detailMode='view'; renderDetail(); };
+  const delBtn = document.createElement('button'); delBtn.className='btn-danger'; delBtn.textContent='Supprimer';
+  delBtn.onclick = ()=> confirmDelete(currentType, currentId);
+  header.append(idBadge, titleInput, readBtn, delBtn);
+  headerEl.appendChild(header);
+
+  const spec = FORM_SPEC[currentType]||[];
+  renderSpecInto(article, record, spec, 'edit');
+  renderCustomSectionsEdit(article, currentType, record);
+  bodyEl.appendChild(article);
+  requestAnimationFrame(()=>{ article.querySelectorAll('textarea').forEach(autoGrowTextarea); });
+}
+
+/* ---------- Infobox (mode lecture) ---------- */
+/* Le vocabulaire de statut dépend du type de fiche. */
+const STATUS_LABELS = {
+  personnages: { active:'En vie', ended:'Mort' },
+  groupes:     { active:'En activité', ended:'Dissous' },
+  lieux:       { active:'Existe', ended:'Détruit' },
+  reliques:    { active:'Existe', ended:'Détruite' },
+  objets:      { active:'Existe', ended:'Détruit' },
+  materiaux:   { active:'Disponible', ended:'Épuisé' },
+  cultures:    { active:'Vivante', ended:'Éteinte' },
+  periodes:    { active:'En cours', ended:'Terminée' },
+  especes:     { active:'Vivante', ended:'Éteinte' },
+};
+function statusText(type, record){
+  if(type==='especes'){
+    const orgs = record.organisations||[];
+    if(orgs.length===0) return 'Unique';
+    const lastOrg = orgs[orgs.length-1];
+    const tl = lastOrg.timeline||[];
+    if(tl.length===0) return 'Unique';
+    const last = tl[tl.length-1];
+    const labels = STATUS_LABELS.especes;
+    const txt = last.fin===null ? labels.active : labels.ended;
+    return txt + (tl.length>1 ? ' ('+tl.length+' périodes)' : '');
+  }
+  const tl = record.timeline||[];
+  const labels = STATUS_LABELS[type] || {active:'En cours', ended:'Terminé'};
+  if(tl.length===0) return 'Inconnu';
+  const last = tl[tl.length-1];
+  const txt = last.fin===null ? labels.active : labels.ended;
+  return txt + (tl.length>1 ? ' ('+tl.length+' périodes)' : '');
+}
+/* Un événement référencé dans le texte s'affiche par sa DATE + son LIEU (ex. « 4.9 à Paris »), pas par son nom. */
+function formatEventDateText(id){
+  const ev = world.events[id];
+  if(!ev) return id;
+  const d = ev.date||{};
+  let label = (d.L!==undefined?d.L:'?')+'.'+(d.l!==undefined?d.l:'?');
+  if(ev.lieu) label += ' à '+resolveLabel(ev.lieu);
+  return label;
+}
+function makeViewLink(id, sources){
+  const foundType = findRecordAnywhere(id);
+  const isPureEventRef = sources && sources.length===1 && sources[0]==='events';
+  const a = document.createElement('a'); a.href='#';
+  if(foundType){
+    a.textContent = isPureEventRef ? formatEventDateText(id) : resolveLabel(id);
+    a.className = 'wiki-link';
+    a.onclick = (e)=>{ e.preventDefault(); currentType=foundType; currentId=id; detailMode='view'; renderSidebar(); renderList(); renderDetail(); };
+  } else {
+    a.textContent = id;
+    a.className = 'wiki-link missing';
+    a.title = "Cette fiche n'existe pas encore \u2014 cliquer pour la créer et la remplir";
+    a.onclick = (e)=>{
+      e.preventDefault();
+      const targetType = pickCreationType(sources, id);
+      if(!targetType) return;
+      createStubWithExactId(targetType, id);
+      currentType = targetType; currentId = id; detailMode='edit';
+      renderSidebar(); renderList(); renderDetail();
+    };
+  }
+  return a;
+}
+/* Valeur numérique comparable pour une date d'Event (L.l) — '?'/'X' comptent comme "le plus ancien". */
+function eventDateSortValue(eventId){
+  const ev = world.events[eventId];
+  if(!ev) return -Infinity;
+  const d = ev.date||{};
+  const L = (typeof d.L==='number') ? d.L : null;
+  if(L===null) return -Infinity;
+  const l = (typeof d.l==='number') ? d.l : 0;
+  return L*100 + l;
+}
+function mostRecentDebutValue(timeline){
+  let best = -Infinity;
+  (timeline||[]).forEach(p=>{ if(p.debut){ const v = eventDateSortValue(p.debut); if(v>best) best=v; } });
+  return best;
+}
+/* Alignement(s) d'un Personnage, du plus récent au plus ancien, avec les dates de chaque période. */
+function renderAlignementsInfobox(container, record, def){
+  const arr = getPath(record, def.key) || [];
+  if(arr.length===0){ container.appendChild(mkEmptyP()); return; }
+  const sorted = arr.slice().sort((x,y)=> mostRecentDebutValue(y.timeline) - mostRecentDebutValue(x.timeline));
+  const ul = document.createElement('ul'); ul.className='view-list';
+  sorted.forEach(a=>{
+    const li = document.createElement('li');
+    if(a.alignement) li.appendChild(makeViewLink(a.alignement, ['alignements']));
+    else li.appendChild(document.createTextNode('(alignement)'));
+    const periods = a.timeline||[];
+    if(periods.length>0){
+      li.appendChild(document.createTextNode(' — '));
+      periods.forEach((p,i)=>{
+        li.appendChild(p.debut ? makeViewLink(p.debut, ['events']) : document.createTextNode('?'));
+        li.appendChild(document.createTextNode(' \u2013 '));
+        li.appendChild(p.fin ? makeViewLink(p.fin, ['events']) : document.createTextNode('en cours'));
+        if(i<periods.length-1) li.appendChild(document.createTextNode(', '));
+      });
+    }
+    ul.appendChild(li);
+  });
+  container.appendChild(ul);
+}
+/* Une ligne d'infobox ne s'affiche que si elle a vraiment quelque chose à montrer — sauf pour les
+   types de champ où "vide" n'a pas de sens (nombre, booléen, date : toujours affichés). */
+function isInfoboxRowEmpty(record, def){
+  const val = getPath(record, def.key);
+  switch(def.kind){
+    case 'text': case 'select':
+      return !(val && String(val).trim());
+    case 'tags': case 'int-list': case 'ref-list': case 'personnage-formes': case 'narrative-list':
+      return !(Array.isArray(val) && val.length>0);
+    case 'ref':
+      return !val;
+    case 'timeline':
+      return !(Array.isArray(val) && val.length>0);
+    case 'roles': case 'alignements': case 'membres': case 'tuepar': case 'affecte': case 'espece-orgs':
+      return !(Array.isArray(val) && val.length>0);
+    default:
+      return false; // nombre, booléen, date : toujours affichés
+  }
+}
+function buildInfobox(type, record){
+  const fullSpec = (FORM_SPEC[type]||[]).filter(def=>!isBodyOnlyField(def));
+  const imageDef = fullSpec.find(d=>d.kind==='image');
+  const spec = fullSpec.filter(def=> def.kind!=='image' && !isInfoboxRowEmpty(record, def));
+  const hasStatus = !!STATUS_LABELS[type] || type==='especes';
+  const imageVal = imageDef ? getPath(record, imageDef.key) : null;
+  if(spec.length===0 && !hasStatus && !imageVal) return null;
+  const box = document.createElement('aside'); box.className='infobox';
+  const titleEl = document.createElement('div'); titleEl.className='infobox-title'; titleEl.textContent = record.nom || TYPE_META[type].singular;
+  box.appendChild(titleEl);
+  if(imageVal){
+    const img = document.createElement('img'); img.className='infobox-image'; img.src = imageVal; img.alt = record.nom||'';
+    img.onerror = ()=>{ img.style.display='none'; };
+    box.appendChild(img);
+  }
+  const table = document.createElement('table'); table.className='infobox-table';
+  if(hasStatus){
+    const tr = document.createElement('tr');
+    const th = document.createElement('th'); th.textContent='Statut';
+    const td = document.createElement('td'); td.textContent = statusText(type, record);
+    tr.append(th, td); table.appendChild(tr);
+  }
+  spec.forEach(def=>{
+    const tr = document.createElement('tr');
+    const th = document.createElement('th'); th.textContent = def.label;
+    const td = document.createElement('td'); td.className='infobox-field';
+    if(def.kind==='alignements') renderAlignementsInfobox(td, record, def);
+    else renderFieldView(td, record, def);
+    tr.append(th, td);
+    table.appendChild(tr);
+  });
+  box.appendChild(table);
+  return box;
+}
+function mkEmptyP(){ const p=document.createElement('p'); p.className='fact-line empty'; p.textContent='—'; return p; }
+
+/* ---------- Rendu de chaque champ en mode lecture ---------- */
+function renderFieldView(container, record, def){
+  const val = getPath(record, def.key);
+  switch(def.kind){
+    case 'text': case 'select': {
+      const p=document.createElement('p'); p.className='fact-line'; p.textContent = val || '—';
+      container.appendChild(p); break;
+    }
+    case 'textarea': case 'lead': {
+      if(!val){ container.appendChild(mkEmptyP()); break; }
+      const p=document.createElement('div'); p.className='prose'; renderNarrativeText(p, val);
+      container.appendChild(p); break;
+    }
+    case 'number': {
+      const p=document.createElement('p'); p.className='fact-line'+((val===null||val===undefined||val==='')?' empty':'');
+      p.textContent = (val===null||val===undefined||val==='') ? '—' : val;
+      container.appendChild(p); break;
+    }
+    case 'boolean': {
+      const p=document.createElement('p'); p.className='fact-line'; p.textContent = val ? 'Oui' : 'Non';
+      container.appendChild(p); break;
+    }
+    case 'tags': case 'int-list': case 'personnage-formes': {
+      const arr = val||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const wrap=document.createElement('div'); wrap.className='chip-row-view';
+      arr.forEach(v=>{
+        const span=document.createElement('span'); span.className='tag-pill'; span.textContent=v;
+        span.onclick=()=>{ listSearchTerm=String(v); renderList(); };
+        wrap.appendChild(span);
+      });
+      container.appendChild(wrap); break;
+    }
+    case 'narrative-list': {
+      const arr = val||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const ul=document.createElement('ul'); ul.className='view-list narrative-view-list';
+      arr.forEach(v=>{ const li=document.createElement('li'); li.className='prose'; renderNarrativeText(li, v); ul.appendChild(li); });
+      container.appendChild(ul); break;
+    }
+    case 'ref': {
+      if(!val){ container.appendChild(mkEmptyP()); break; }
+      const p=document.createElement('p'); p.appendChild(makeViewLink(val, def.sources)); container.appendChild(p); break;
+    }
+    case 'ref-list': {
+      const arr = val||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const ul=document.createElement('ul'); ul.className='view-list';
+      arr.forEach(id=>{ const li=document.createElement('li'); li.appendChild(makeViewLink(id, def.sources)); ul.appendChild(li); });
+      container.appendChild(ul); break;
+    }
+    case 'timeline': {
+      const arr = val||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const ul=document.createElement('ul'); ul.className='view-list';
+      arr.forEach(p=>{
+        const li=document.createElement('li');
+        li.appendChild(document.createTextNode('De '));
+        li.appendChild(p.debut ? makeViewLink(p.debut, ['events']) : document.createTextNode('?'));
+        li.appendChild(document.createTextNode(' à '));
+        li.appendChild(p.fin ? makeViewLink(p.fin, ['events']) : document.createTextNode('aujourd\u2019hui / en cours'));
+        ul.appendChild(li);
+      });
+      container.appendChild(ul); break;
+    }
+    case 'roles': {
+      const arr = val||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const ul=document.createElement('ul'); ul.className='view-list';
+      arr.forEach(r=>{
+        const li=document.createElement('li');
+        li.appendChild(document.createTextNode((r.nom||'(rôle)')+' — '));
+        if(r.lieu) li.appendChild(makeViewLink(r.lieu, ['lieux','regions'])); else li.appendChild(document.createTextNode('lieu inconnu'));
+        ul.appendChild(li);
+      });
+      container.appendChild(ul); break;
+    }
+    case 'alignements': {
+      const arr = val||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const ul=document.createElement('ul'); ul.className='view-list';
+      arr.forEach(a=>{
+        const li=document.createElement('li');
+        if(a.alignement) li.appendChild(makeViewLink(a.alignement, ['alignements']));
+        else li.appendChild(document.createTextNode('(alignement)'));
+        ul.appendChild(li);
+      });
+      container.appendChild(ul); break;
+    }
+    case 'membres': {
+      const arr = val||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const ul=document.createElement('ul'); ul.className='view-list';
+      arr.forEach(m=>{ const li=document.createElement('li'); li.appendChild(makeViewLink(m.id, def.sources)); ul.appendChild(li); });
+      container.appendChild(ul); break;
+    }
+    case 'tuepar': {
+      const arr = val||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const ul=document.createElement('ul'); ul.className='view-list';
+      arr.forEach(t=>{
+        const li=document.createElement('li');
+        li.appendChild(document.createTextNode('Tué par '));
+        if(t.personnage) li.appendChild(makeViewLink(t.personnage, ['personnages']));
+        if(t.evenement){ li.appendChild(document.createTextNode(' — mort en ')); li.appendChild(makeViewLink(t.evenement, ['events'])); }
+        ul.appendChild(li);
+      });
+      container.appendChild(ul); break;
+    }
+    case 'affecte': {
+      const arr = val||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const ul=document.createElement('ul'); ul.className='view-list';
+      arr.forEach(a=>{
+        const li=document.createElement('li');
+        const coll = TYPE_TO_COLLECTION[a.type];
+        li.appendChild(document.createTextNode('['+(TYPE_META[coll]?TYPE_META[coll].singular:a.type)+'] '));
+        if(a.id) li.appendChild(makeViewLink(a.id, [coll]));
+        ul.appendChild(li);
+      });
+      container.appendChild(ul); break;
+    }
+    case 'description': {
+      const obj = val||{};
+      let any=false;
+      def.fields.forEach(([fk,flabel])=>{
+        if(obj[fk]){
+          any=true;
+          const h4=document.createElement('h4'); h4.className='sub-heading'; h4.textContent=flabel;
+          const p=document.createElement('div'); p.className='prose'; renderNarrativeText(p, obj[fk]);
+          container.append(h4,p);
+        }
+      });
+      if(!any) container.appendChild(mkEmptyP());
+      break;
+    }
+    case 'habitants': {
+      const arr = record.habitants||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const ul=document.createElement('ul'); ul.className='view-list';
+      arr.forEach(h=>{
+        const li=document.createElement('li');
+        li.appendChild(makeViewLink(h.personnage, ['personnages']));
+        li.appendChild(document.createTextNode(' — '+(h.role||'')));
+        ul.appendChild(li);
+      });
+      container.appendChild(ul); break;
+    }
+    case 'espece-orgs': {
+      const arr = val||[];
+      if(arr.length===0){ container.appendChild(mkEmptyP()); break; }
+      const ul=document.createElement('ul'); ul.className='view-list';
+      arr.forEach(o=>{
+        const li=document.createElement('li');
+        li.appendChild(document.createTextNode((o.type_organisation||'(type inconnu)')+' — source : '));
+        const srcType = o.source && typeof o.source==='object' ? o.source.type : null;
+        const srcId = o.source && typeof o.source==='object' ? o.source.id : o.source;
+        if(srcId){
+          const coll = TYPE_TO_COLLECTION[srcType] || 'groupes';
+          li.appendChild(document.createTextNode('['+(TYPE_META[coll]?TYPE_META[coll].singular:srcType)+'] '));
+          li.appendChild(makeViewLink(srcId, [coll]));
+        } else {
+          li.appendChild(document.createTextNode('inconnue'));
+        }
+        li.appendChild(document.createTextNode(' : '));
+        const periods = o.timeline||[];
+        if(periods.length===0){ li.appendChild(document.createTextNode('période inconnue')); }
+        else periods.forEach((p,i)=>{
+          li.appendChild(p.debut ? makeViewLink(p.debut, ['events']) : document.createTextNode('?'));
+          li.appendChild(document.createTextNode(' \u2013 '));
+          li.appendChild(p.fin ? makeViewLink(p.fin, ['events']) : document.createTextNode('en cours'));
+          if(i<periods.length-1) li.appendChild(document.createTextNode(', '));
+        });
+        ul.appendChild(li);
+      });
+      container.appendChild(ul); break;
+    }
+    case 'date': {
+      const d = record.date||{};
+      const p=document.createElement('p'); p.className='fact-line'; p.textContent=(d.L!==undefined?d.L:'?')+'.'+(d.l!==undefined?d.l:'?');
+      container.appendChild(p); break;
+    }
+  }
+}
+
+/* =========================================================
+   CHAMPS — DISPATCH
+   ========================================================= */
+function buildField(container, record, def){
+  const val0 = getPath(record, def.key);
+  switch(def.kind){
+    case 'text': {
+      const input = document.createElement('input'); input.type='text'; input.value = val0||'';
+      if(def.datalist){
+        const dlid = 'dl_text_'+def.key.replace(/\./g,'_');
+        let dl = document.getElementById(dlid);
+        if(!dl){
+          dl = document.createElement('datalist'); dl.id=dlid; dl.classList.add('dyn-datalist');
+          def.datalist.forEach(v=>{ const o=document.createElement('option'); o.value=v; dl.appendChild(o); });
+          document.body.appendChild(dl);
+        }
+        input.setAttribute('list', dlid);
+      }
+      input.oninput = ()=>{ setPath(record, def.key, input.value); markDirty(); };
+      container.appendChild(input);
+      break;
+    }
+    case 'textarea': case 'lead': {
+      const ta = document.createElement('textarea'); ta.rows=(def.kind==='lead'?3:5); ta.value = val0||'';
+      ta.oninput = ()=>{ setPath(record, def.key, ta.value); markDirty(); };
+      ta.addEventListener('input', ()=>autoGrowTextarea(ta));
+      attachWikiLinkAutocomplete(ta);
+      container.appendChild(ta);
+      break;
+    }
+    case 'number': {
+      const input = document.createElement('input'); input.type='number';
+      if(def.min!==undefined) input.min=def.min;
+      if(def.max!==undefined) input.max=def.max;
+      input.value = (val0===undefined||val0===null) ? '' : val0;
+      input.oninput = ()=>{ const n = input.value===''? null : Number(input.value); setPath(record, def.key, n); markDirty(); };
+      container.appendChild(input);
+      break;
+    }
+    case 'boolean': {
+      const label = document.createElement('label'); label.className='checkbox-label';
+      const input = document.createElement('input'); input.type='checkbox'; input.checked = !!val0;
+      input.onchange = ()=>{ setPath(record, def.key, input.checked); markDirty(); };
+      label.append(input, document.createTextNode(' '+(def.checkboxLabel||'Oui')));
+      container.appendChild(label);
+      break;
+    }
+    case 'select': {
+      const sel = document.createElement('select');
+      def.options.forEach(o=>{ const opt=document.createElement('option'); opt.value=o; opt.textContent=o; if(o===val0) opt.selected=true; sel.appendChild(opt); });
+      sel.onchange = ()=>{ setPath(record, def.key, sel.value); markDirty(); };
+      container.appendChild(sel);
+      break;
+    }
+    case 'image': {
+      const input = document.createElement('input'); input.type='text'; input.value = val0||''; input.placeholder="https://…";
+      const preview = document.createElement('img'); preview.className='image-field-preview';
+      preview.style.display = val0 ? 'block' : 'none';
+      if(val0) preview.src = val0;
+      preview.onerror = ()=>{ preview.style.display='none'; };
+      preview.onload = ()=>{ preview.style.display='block'; };
+      input.oninput = ()=>{
+        setPath(record, def.key, input.value.trim());
+        markDirty();
+        if(input.value.trim()){ preview.src = input.value.trim(); } else { preview.style.display='none'; }
+      };
+      container.append(input, preview);
+      break;
+    }
+    case 'tags': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildTagsEditor(container, arr, ()=>markDirty());
+      break;
+    }
+    case 'personnage-formes': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildTagsEditor(container, arr, ()=>markDirty());
+      const syncBtn = document.createElement('button'); syncBtn.type='button'; syncBtn.className='btn-small';
+      syncBtn.textContent = "Ajouter les formes des espèces";
+      syncBtn.title = "Ajoute ici toutes les Formes déjà listées sur les Espèce(s) de ce personnage.";
+      syncBtn.onclick = ()=>{
+        const especeIds = record.especes || [];
+        let added = 0;
+        especeIds.forEach(id=>{
+          const esp = world.especes[id];
+          if(!esp || !esp.attributs) return;
+          (esp.attributs.formes||[]).forEach(f=>{ if(!arr.includes(f)){ arr.push(f); added++; } });
+        });
+        if(added===0){ alert("Rien à ajouter : les espèces de ce personnage n'ont aucune forme listée (ou elles y sont déjà toutes)."); return; }
+        markDirty();
+        renderDetail();
+      };
+      container.appendChild(syncBtn);
+      break;
+    }
+    case 'narrative-list': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildNarrativeListEditor(container, arr, ()=>markDirty());
+      break;
+    }
+    case 'int-list': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildIntListEditor(container, arr, def.min, def.max, ()=>markDirty());
+      break;
+    }
+    case 'ref': {
+      const input = makeRefInput(def.sources, val0||'', v=>{
+        const id = v ? resolveOrCreateRef(v, def.sources) : null;
+        setPath(record, def.key, id);
+        markDirty();
+      }, def.excludeFlag);
+      if(def.nullable){
+        const clearBtn = document.createElement('button'); clearBtn.type='button'; clearBtn.className='btn-small'; clearBtn.textContent='Effacer';
+        clearBtn.onclick = ()=>{ input.value=''; setPath(record, def.key, null); markDirty(); };
+        const row = document.createElement('div'); row.className='ref-row'; row.append(input, clearBtn);
+        container.appendChild(row);
+      } else container.appendChild(input);
+      break;
+    }
+    case 'ref-list': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildRefList(container, arr, def.sources, ()=>markDirty(), def.excludeFlag);
+      break;
+    }
+    case 'timeline': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildTimeline(container, arr, ()=>markDirty());
+      break;
+    }
+    case 'roles': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildRoles(container, arr, ()=>markDirty());
+      break;
+    }
+    case 'alignements': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildAlignements(container, arr, ()=>markDirty());
+      break;
+    }
+    case 'membres': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildMembres(container, arr, def.sources, ()=>markDirty());
+      break;
+    }
+    case 'tuepar': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildTuePar(container, arr, ()=>markDirty());
+      break;
+    }
+    case 'affecte': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildAffecte(container, arr, ()=>markDirty());
+      break;
+    }
+    case 'description': {
+      let obj = val0;
+      if(!obj){ obj={}; setPath(record, def.key, obj); }
+      def.fields.forEach(([fk,flabel])=>{
+        const wrap = document.createElement('div'); wrap.className='subfield';
+        const lab = document.createElement('label'); lab.textContent=flabel;
+        const ta = document.createElement('textarea'); ta.rows=3; ta.value = obj[fk]||'';
+        ta.oninput = ()=>{ obj[fk]=ta.value; markDirty(); };
+        ta.addEventListener('input', ()=>autoGrowTextarea(ta));
+        attachWikiLinkAutocomplete(ta);
+        wrap.append(lab, ta);
+        container.appendChild(wrap);
+      });
+      break;
+    }
+    case 'habitants': {
+      buildHabitants(container, record, ()=>markDirty());
+      break;
+    }
+    case 'espece-orgs': {
+      const arr = val0 || (()=>{ const a=[]; setPath(record,def.key,a); return a; })();
+      buildEspeceOrgs(container, arr, ()=>markDirty());
+      break;
+    }
+    case 'date': {
+      buildDateEditor(container, record, ()=>markDirty());
+      break;
+    }
+  }
+}
+
+/* =========================================================
+   WIDGETS REUTILISABLES
+   ========================================================= */
+function buildTagsEditor(container, arr, onChange){
+  const wrap = document.createElement('div'); wrap.className='chip-row';
+  function render(){
+    wrap.innerHTML='';
+    arr.forEach((v,idx)=>{
+      const chip=document.createElement('span'); chip.className='chip';
+      const span=document.createElement('span'); span.textContent=v;
+      const rm=document.createElement('button'); rm.type='button'; rm.className='chip-remove'; rm.textContent='×';
+      rm.onclick=()=>{ arr.splice(idx,1); onChange(); render(); };
+      chip.append(span, rm);
+      wrap.appendChild(chip);
+    });
+  }
+  render();
+  const addRow=document.createElement('div'); addRow.className='add-row';
+  const input=document.createElement('input'); input.type='text'; input.placeholder='Ajouter…';
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
+  const btn=document.createElement('button'); btn.type='button'; btn.className='btn-small'; btn.textContent='Ajouter';
+  btn.onclick=commit;
+  function commit(){ const v=input.value.trim(); if(!v) return; arr.push(v); input.value=''; onChange(); render(); }
+  addRow.append(input, btn);
+  container.append(wrap, addRow);
+}
+/* Liste de textes narratifs (anecdotes...) : chaque entrée est un petit texte multi-lignes,
+   pas un mot-clé — donc des zones de texte, pas des puces. */
+function buildNarrativeListEditor(container, arr, onChange){
+  const list = document.createElement('div'); list.className='narrative-list-edit';
+  function render(){
+    list.innerHTML='';
+    arr.forEach((v,idx)=>{
+      const row = document.createElement('div'); row.className='narrative-item';
+      const taWrap = document.createElement('div'); taWrap.style.flex='1';
+      const ta = document.createElement('textarea'); ta.rows=2; ta.value=v; ta.style.width='100%';
+      ta.oninput = ()=>{ arr[idx]=ta.value; onChange(); };
+      ta.addEventListener('input', ()=>autoGrowTextarea(ta));
+      taWrap.appendChild(ta);
+      attachWikiLinkAutocomplete(ta);
+      const rm = document.createElement('button'); rm.type='button'; rm.className='btn-small btn-danger'; rm.textContent='Supprimer';
+      rm.onclick = ()=>{ arr.splice(idx,1); onChange(); render(); };
+      row.append(taWrap, rm);
+      list.appendChild(row);
+    });
+  }
+  render();
+  const addBtn = document.createElement('button'); addBtn.type='button'; addBtn.className='btn-small'; addBtn.textContent='+ Ajouter';
+  addBtn.onclick = ()=>{ arr.push(''); onChange(); render(); };
+  container.append(list, addBtn);
+}
+
+function buildIntListEditor(container, arr, min, max, onChange){
+  const wrap=document.createElement('div'); wrap.className='chip-row';
+  function render(){
+    wrap.innerHTML='';
+    arr.forEach((v,idx)=>{
+      const chip=document.createElement('span'); chip.className='chip';
+      const span=document.createElement('span'); span.textContent=v;
+      const rm=document.createElement('button'); rm.type='button'; rm.className='chip-remove'; rm.textContent='×';
+      rm.onclick=()=>{ arr.splice(idx,1); onChange(); render(); };
+      chip.append(span, rm);
+      wrap.appendChild(chip);
+    });
+  }
+  render();
+  const addRow=document.createElement('div'); addRow.className='add-row';
+  const input=document.createElement('input'); input.type='number';
+  if(min!==undefined) input.min=min;
+  if(max!==undefined) input.max=max;
+  const btn=document.createElement('button'); btn.type='button'; btn.className='btn-small'; btn.textContent='Ajouter';
+  btn.onclick=()=>{ if(input.value==='') return; const n=Number(input.value); if(!arr.includes(n)) arr.push(n); input.value=''; onChange(); render(); };
+  addRow.append(input, btn);
+  container.append(wrap, addRow);
+}
+
+function ensureDatalist(sources, excludeFlag){
+  const key = 'dl_'+sources.join('_')+(excludeFlag? '_no-'+excludeFlag : '');
+  let dl = document.getElementById(key);
+  if(dl) return key;
+  dl = document.createElement('datalist'); dl.id=key; dl.classList.add('dyn-datalist');
+  sources.forEach(src=>{
+    const coll = world[src]||{};
+    Object.keys(coll).sort().forEach(id=>{
+      const r = coll[id];
+      if(excludeFlag && r[excludeFlag]) return;
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = (r.nom? r.nom+' — ':'') + id;
+      dl.appendChild(opt);
+    });
+  });
+  document.body.appendChild(dl);
+  return key;
+}
+function makeRefInput(sources, value, onPick, excludeFlag){
+  const domId = ensureDatalist(sources, excludeFlag);
+  const input = document.createElement('input');
+  input.type='text'; input.className='ref-input'; input.setAttribute('list', domId);
+  input.value = value||''; input.placeholder='ID ou nom…';
+  input.addEventListener('change', ()=> onPick(input.value.trim()));
+  return input;
+}
+
+function buildRefList(container, arr, sources, onChange, excludeFlag){
+  const wrap=document.createElement('div'); wrap.className='chip-row';
+  function render(){
+    wrap.innerHTML='';
+    arr.forEach((id,idx)=>{
+      const chip=document.createElement('span'); chip.className='chip';
+      const span=document.createElement('span'); span.textContent=resolveLabel(id);
+      const small=document.createElement('span'); small.className='chip-id'; small.textContent=id;
+      const rm=document.createElement('button'); rm.type='button'; rm.className='chip-remove'; rm.textContent='×';
+      rm.onclick=()=>{ arr.splice(idx,1); onChange(); render(); };
+      chip.append(span, small, rm);
+      wrap.appendChild(chip);
+    });
+  }
+  render();
+  const addRow=document.createElement('div'); addRow.className='add-row';
+  const input = makeRefInput(sources, '', ()=>{}, excludeFlag);
+  const btn=document.createElement('button'); btn.type='button'; btn.className='btn-small'; btn.textContent='Ajouter';
+  btn.onclick=()=>{
+    const v = input.value.trim(); if(!v) return;
+    const id = resolveOrCreateRef(v, sources);
+    if(!id){ input.classList.add('invalid'); setTimeout(()=>input.classList.remove('invalid'),900); return; }
+    const rec = sources.map(s=>(world[s]||{})[id]).find(Boolean);
+    if(excludeFlag && rec && rec[excludeFlag]){
+      input.classList.add('invalid'); setTimeout(()=>input.classList.remove('invalid'),900); return;
+    }
+    if(!arr.includes(id)) arr.push(id);
+    input.value=''; onChange(); render();
+  };
+  addRow.append(input, btn);
+  container.append(wrap, addRow);
+}
+
+function buildTimeline(container, arr, onChange){
+  const list=document.createElement('div'); list.className='timeline-list';
+  function render(){
+    list.innerHTML='';
+    arr.forEach((pair,idx)=>{
+      const row=document.createElement('div'); row.className='timeline-row';
+      const debutInput = makeRefInput(['events'], pair.debut||'', v=>{
+        pair.debut = resolveOrCreateRef(v, ['events']) || v; onChange();
+      });
+      const finInput = makeRefInput(['events'], pair.fin||'', v=>{
+        if(!v){ pair.fin=null; } else { pair.fin = resolveOrCreateRef(v,['events']) || v; }
+        onChange();
+      });
+      finInput.placeholder='(en cours si vide)';
+      const rm=document.createElement('button'); rm.type='button'; rm.className='btn-small btn-danger'; rm.textContent='Supprimer';
+      rm.onclick=()=>{ arr.splice(idx,1); onChange(); render(); };
+      row.append(labelSpan('Début'), debutInput, labelSpan('Fin'), finInput, rm);
+      list.appendChild(row);
+    });
+  }
+  render();
+  const addBtn=document.createElement('button'); addBtn.type='button'; addBtn.className='btn-small'; addBtn.textContent='+ Ajouter une période';
+  addBtn.onclick=()=>{ arr.push({debut:'', fin:null}); onChange(); render(); };
+  container.append(list, addBtn);
+}
+
+function buildRoles(container, arr, onChange){
+  const list=document.createElement('div');
+  function render(){
+    list.innerHTML='';
+    arr.forEach((role,idx)=>{
+      role.timeline = role.timeline || [];
+      const box=document.createElement('div'); box.className='sub-box';
+      const nomInput=document.createElement('input'); nomInput.type='text'; nomInput.placeholder='Nom du rôle'; nomInput.value=role.nom||'';
+      nomInput.oninput=()=>{ role.nom=nomInput.value; onChange(); };
+      const lieuInput = makeRefInput(['lieux','regions'], role.lieu||'', v=>{ role.lieu = resolveOrCreateRef(v,['lieux','regions']) || v; onChange(); });
+      const rm=document.createElement('button'); rm.type='button'; rm.className='btn-small btn-danger'; rm.textContent='Supprimer ce rôle';
+      rm.onclick=()=>{ arr.splice(idx,1); onChange(); render(); };
+      const rowTop=document.createElement('div'); rowTop.className='sub-row';
+      rowTop.append(labelSpan('Rôle'), nomInput, labelSpan('Lieu'), lieuInput, rm);
+      box.appendChild(rowTop);
+      buildTimeline(box, role.timeline, onChange);
+      list.appendChild(box);
+    });
+  }
+  render();
+  const addBtn=document.createElement('button'); addBtn.type='button'; addBtn.className='btn-small'; addBtn.textContent='+ Ajouter un rôle';
+  addBtn.onclick=()=>{ arr.push({nom:'', lieu:'', timeline:[]}); onChange(); render(); };
+  container.append(list, addBtn);
+}
+
+function buildAlignements(container, arr, onChange){
+  const list=document.createElement('div');
+  function render(){
+    list.innerHTML='';
+    arr.forEach((al,idx)=>{
+      al.timeline = al.timeline || [];
+      const box=document.createElement('div'); box.className='sub-box';
+      const input = makeRefInput(['alignements'], al.alignement||'', v=>{
+        al.alignement = v ? (resolveOrCreateRef(v, ['alignements'])||v) : null;
+        onChange();
+      });
+      const rm=document.createElement('button'); rm.type='button'; rm.className='btn-small btn-danger'; rm.textContent='Supprimer';
+      rm.onclick=()=>{ arr.splice(idx,1); onChange(); render(); };
+      const rowTop=document.createElement('div'); rowTop.className='sub-row';
+      rowTop.append(labelSpan('Alignement'), input, rm);
+      box.appendChild(rowTop);
+      buildTimeline(box, al.timeline, onChange);
+      list.appendChild(box);
+    });
+  }
+  render();
+  const addBtn=document.createElement('button'); addBtn.type='button'; addBtn.className='btn-small'; addBtn.textContent='+ Ajouter un alignement';
+  addBtn.onclick=()=>{ arr.push({alignement:'', timeline:[]}); onChange(); render(); };
+  container.append(list, addBtn);
+}
+
+function buildMembres(container, arr, sources, onChange){
+  const list=document.createElement('div');
+  function render(){
+    list.innerHTML='';
+    arr.forEach((m,idx)=>{
+      m.timeline = m.timeline || [];
+      const box=document.createElement('div'); box.className='sub-box';
+      const idInput = makeRefInput(sources, m.id||'', v=>{ m.id = resolveOrCreateRef(v,sources) || v; onChange(); });
+      const rm=document.createElement('button'); rm.type='button'; rm.className='btn-small btn-danger'; rm.textContent='Supprimer';
+      rm.onclick=()=>{ arr.splice(idx,1); onChange(); render(); };
+      const rowTop=document.createElement('div'); rowTop.className='sub-row';
+      rowTop.append(labelSpan('Membre'), idInput, rm);
+      box.appendChild(rowTop);
+      buildTimeline(box, m.timeline, onChange);
+      list.appendChild(box);
+    });
+  }
+  render();
+  const addBtn=document.createElement('button'); addBtn.type='button'; addBtn.className='btn-small'; addBtn.textContent='+ Ajouter un membre';
+  addBtn.onclick=()=>{ arr.push({id:'', timeline:[]}); onChange(); render(); };
+  container.append(list, addBtn);
+}
+
+function buildTuePar(container, arr, onChange){
+  const list=document.createElement('div');
+  function render(){
+    list.innerHTML='';
+    arr.forEach((t,idx)=>{
+      const row=document.createElement('div'); row.className='timeline-row';
+      const perInput = makeRefInput(['personnages'], t.personnage||'', v=>{ t.personnage = resolveOrCreateRef(v,['personnages']) || v; onChange(); });
+      const evtInput = makeRefInput(['events'], t.evenement||'', v=>{ t.evenement = resolveOrCreateRef(v,['events']) || v; onChange(); });
+      const rm=document.createElement('button'); rm.type='button'; rm.className='btn-small btn-danger'; rm.textContent='Supprimer';
+      rm.onclick=()=>{ arr.splice(idx,1); onChange(); render(); };
+      row.append(labelSpan('Tueur'), perInput, labelSpan('Événement'), evtInput, rm);
+      list.appendChild(row);
+    });
+  }
+  render();
+  const addBtn=document.createElement('button'); addBtn.type='button'; addBtn.className='btn-small'; addBtn.textContent='+ Ajouter un tueur';
+  addBtn.onclick=()=>{ arr.push({personnage:'', evenement:''}); onChange(); render(); };
+  container.append(list, addBtn);
+}
+
+function buildAffecte(container, arr, onChange){
+  const list=document.createElement('div');
+  function render(){
+    list.innerHTML='';
+    arr.forEach((item,idx)=>{
+      const row=document.createElement('div'); row.className='timeline-row';
+      const typeSel=document.createElement('select');
+      REF_TYPE_OPTIONS.forEach(t=>{ const o=document.createElement('option'); o.value=t.value; o.textContent=t.label; if(t.value===item.type) o.selected=true; typeSel.appendChild(o); });
+      typeSel.onchange=()=>{ item.type=typeSel.value; item.id=''; onChange(); render(); };
+      const src = TYPE_TO_COLLECTION[item.type] || 'personnages';
+      const idInput = makeRefInput([src], item.id||'', v=>{ item.id = resolveOrCreateRef(v,[src]) || v; onChange(); });
+      const rm=document.createElement('button'); rm.type='button'; rm.className='btn-small btn-danger'; rm.textContent='×';
+      rm.onclick=()=>{ arr.splice(idx,1); onChange(); render(); };
+      row.append(typeSel, idInput, rm);
+      list.appendChild(row);
+    });
+  }
+  render();
+  const addBtn=document.createElement('button'); addBtn.type='button'; addBtn.className='btn-small'; addBtn.textContent='+ Ajouter une entité affectée';
+  addBtn.onclick=()=>{ arr.push({type:'personnage', id:''}); onChange(); render(); };
+  container.append(list, addBtn);
+}
+
+function recalcHabitants(lieuId){
+  const out=[];
+  Object.values(world.personnages||{}).forEach(p=>{
+    (p.roles||[]).forEach(r=>{
+      if(r.lieu===lieuId) out.push({personnage:p.id, role:r.nom, timeline:r.timeline||[]});
+    });
+  });
+  return out;
+}
+function buildHabitants(container, record, onChange){
+  const info=document.createElement('p'); info.className='field-hint';
+  info.textContent = (record.habitants&&record.habitants.length) ? (record.habitants.length+' habitant(s) répertorié(s).') : 'Aucun habitant calculé pour le moment.';
+  const list=document.createElement('ul'); list.className='readonly-list';
+  (record.habitants||[]).forEach(h=>{
+    const li=document.createElement('li');
+    li.textContent = resolveLabel(h.personnage)+' — '+(h.role||'');
+    list.appendChild(li);
+  });
+  const btn=document.createElement('button'); btn.type='button'; btn.className='btn-small'; btn.textContent='Recalculer depuis les rôles';
+  btn.onclick=()=>{ record.habitants = recalcHabitants(record.id); onChange(); renderDetail(); };
+  container.append(info, list, btn);
+}
+
+/* Espece.organisations : n-uplet (Type d'organisation, Source, Timeline) au lieu d'une simple liste de périodes. */
+function buildEspeceOrgs(container, arr, onChange){
+  const list=document.createElement('div');
+  function render(){
+    list.innerHTML='';
+    arr.forEach((o,idx)=>{
+      o.timeline = o.timeline || [];
+      if(typeof o.source==='string') o.source = { type:'groupe', id:o.source };
+      if(!o.source || typeof o.source!=='object') o.source = { type:'groupe', id:'' };
+      const box=document.createElement('div'); box.className='sub-box';
+      const typeInput=document.createElement('input'); typeInput.type='text'; typeInput.placeholder="Type d'organisation (solitaire, meute, ruche…)"; typeInput.value=o.type_organisation||'';
+      typeInput.oninput=()=>{ o.type_organisation=typeInput.value; onChange(); };
+      const sourceTypeSel=document.createElement('select');
+      REF_TYPE_OPTIONS.forEach(t=>{ const opt=document.createElement('option'); opt.value=t.value; opt.textContent=t.label; if(t.value===o.source.type) opt.selected=true; sourceTypeSel.appendChild(opt); });
+      sourceTypeSel.onchange=()=>{ o.source.type=sourceTypeSel.value; o.source.id=''; onChange(); render(); };
+      const srcColl = TYPE_TO_COLLECTION[o.source.type] || 'groupes';
+      const sourceInput = makeRefInput([srcColl], o.source.id||'', v=>{
+        o.source.id = v ? (resolveOrCreateRef(v, [srcColl]) || v) : '';
+        onChange();
+      });
+      const rm=document.createElement('button'); rm.type='button'; rm.className='btn-small btn-danger'; rm.textContent='Supprimer';
+      rm.onclick=()=>{ arr.splice(idx,1); onChange(); render(); };
+      const rowTop=document.createElement('div'); rowTop.className='sub-row';
+      rowTop.append(labelSpan("Type d'organisation"), typeInput, labelSpan('Source'), sourceTypeSel, sourceInput, rm);
+      box.appendChild(rowTop);
+      buildTimeline(box, o.timeline, onChange);
+      list.appendChild(box);
+    });
+  }
+  render();
+  const addBtn=document.createElement('button'); addBtn.type='button'; addBtn.className='btn-small'; addBtn.textContent='+ Ajouter un mode d\u2019organisation';
+  addBtn.onclick=()=>{ arr.push({type_organisation:'', source:{type:'groupe', id:''}, timeline:[]}); onChange(); render(); };
+  container.append(list, addBtn);
+}
+
+function buildDateEditor(container, record, onChange){
+  record.date = record.date || {L:'?', l:'?'};
+  const wrap=document.createElement('div'); wrap.className='date-editor';
+  const optionsL = ['1','2','3','4','5','6','7','8','9','10','11','12','?','X'];
+  const optionsl = ['0','1','2','3','4','5','6','7','8','9','10','11','12','?','X'];
+  const Lsel=document.createElement('select');
+  optionsL.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; Lsel.appendChild(o); });
+  const lsel=document.createElement('select');
+  optionsl.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; lsel.appendChild(o); });
+  Lsel.value = String(record.date.L);
+  lsel.value = String(record.date.l);
+  const warn=document.createElement('div'); warn.className='field-warning';
+  function parseVal(v){ return (v==='?'||v==='X') ? v : parseInt(v,10); }
+  function validate(){
+    const L=Lsel.value, l=lsel.value;
+    let msg='';
+    if((L==='X') !== (l==='X')) msg='X doit toujours être en paire (X.X).';
+    else if(l==='0' && L!=='1') msg="l = 0 n'est autorisé que si L = 1 (date « 1.0 »).";
+    warn.textContent = msg;
+    warn.style.display = msg ? 'block' : 'none';
+  }
+  Lsel.onchange = ()=>{ record.date.L = parseVal(Lsel.value); validate(); onChange(); };
+  lsel.onchange = ()=>{ record.date.l = parseVal(lsel.value); validate(); onChange(); };
+  validate();
+  wrap.append(labelSpan('L'), Lsel, labelSpan('.'), lsel);
+  container.append(wrap, warn);
+}
+
+/* =========================================================
+   CREATION / SUPPRESSION
+   ========================================================= */
+function openCreateModal(type){
+  if(type==='regions'){ openRegionCreateModal(); return; }
+  const content=document.createElement('div');
+  const h=document.createElement('h3'); h.textContent='Nouveau '+TYPE_META[type].singular;
+  const row=document.createElement('div'); row.className='modal-row';
+  const input=document.createElement('input'); input.type='text'; input.placeholder='Nom';
+  row.append(labelSpan('Nom'), input);
+  const actions=document.createElement('div'); actions.className='modal-actions';
+  const cancel=document.createElement('button'); cancel.textContent='Annuler'; cancel.onclick=closeModal;
+  const ok=document.createElement('button'); ok.className='btn-primary'; ok.textContent='Créer';
+  ok.onclick=()=>{
+    const nom=input.value.trim();
+    if(!nom){ input.classList.add('invalid'); return; }
+    const id=generateId(type, world[type]);
+    const rec={id, nom};
+    ensureRecordDefaults(type,id,rec);
+    world[type][id]=rec;
+    attachGenesisEvent(type, rec);
+    markDirty(); currentType=type; currentId=id; detailMode='edit'; closeModal();
+    renderSidebar(); renderList(); renderDetail();
+  };
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); ok.click(); } });
+  actions.append(cancel, ok);
+  content.append(h,row,actions);
+  showModal(content);
+  input.focus();
+}
+
+/* Génère toutes les régions de la grille A1 à I14 (126 cases). Ne touche pas aux régions existantes. */
+function generateFullRegionGrid(){
+  const missing = [];
+  'ABCDEFGHIJ'.split('').forEach(letter=>{
+    for(let n=1;n<=14;n++){ const id=letter+n; if(!world.regions[id]) missing.push(id); }
+  });
+  if(missing.length===0){ alert('Les 140 régions de la grille existent déjà.'); return; }
+  if(!confirm(missing.length+' région(s) manquante(s) sur la grille A1–J14 vont être créées. Continuer ?')) return;
+  missing.forEach(id=>{
+    const rec = { id, nom:id, abs:id[0], ord:parseInt(id.slice(1),10) };
+    ensureRecordDefaults('regions', id, rec);
+    world.regions[id] = rec;
+  });
+  markDirty();
+  renderSidebar(); renderList(); renderDetail();
+}
+/* Génère un Event marquant vide pour chaque date de 1.1 à 8.12 (L de 1 à 8, l de 1 à 12) qui n'en a
+   pas déjà un — sert de trame chronologique à compléter ensuite, comme la grille de régions. */
+function generateMarquantEventsGrid(){
+  const missing = [];
+  for(let L=1; L<=8; L++){
+    for(let l=1; l<=12; l++){
+      const exists = Object.values(world.events).some(e=> e.marquant && e.date && e.date.L===L && e.date.l===l);
+      if(!exists) missing.push({L,l});
+    }
+  }
+  if(missing.length===0){ alert('Tous les événements marquants de 1.1 à 8.12 existent déjà.'); return; }
+  if(!confirm(missing.length+" événement(s) marquant(s) manquant(s) entre 1.1 et 8.12 vont être créés (vides, à compléter). Continuer ?")) return;
+  missing.forEach(({L,l})=>{
+    const id = generateId('events', world.events);
+    const rec = { id, date:{L,l}, nom:'Événement marquant '+L+'.'+l, ordre:1, marquant:true, lieu:null, characters:[], tags:[], anecdotes:[], sections:[] };
+    world.events[id] = rec;
+  });
+  markDirty();
+  renderSidebar(); renderList(); renderDetail();
+}
+function openRegionCreateModal(){
+  const content=document.createElement('div');
+  content.innerHTML='<h3>Nouvelle région</h3>';
+  const modeRow=document.createElement('div'); modeRow.className='modal-row';
+  const modeSel=document.createElement('select');
+  [['coord','Coordonnée (lettre + numéro)'],['XX','Hors du monde (XX)'],['??','Position inconnue (??)']].forEach(([v,l])=>{
+    const o=document.createElement('option'); o.value=v; o.textContent=l; modeSel.appendChild(o);
+  });
+  modeRow.append(labelSpan('Type'), modeSel);
+  const coordRow=document.createElement('div'); coordRow.className='modal-row';
+  const absSel=document.createElement('select');
+  'ABCDEFGHIJ'.split('').forEach(l=>{ const o=document.createElement('option'); o.value=l; o.textContent=l; absSel.appendChild(o); });
+  const ordInput=document.createElement('input'); ordInput.type='number'; ordInput.min=1; ordInput.max=14; ordInput.value=1;
+  coordRow.append(labelSpan('Lettre'), absSel, labelSpan('Nombre'), ordInput);
+  const nomRow=document.createElement('div'); nomRow.className='modal-row';
+  const nomInput=document.createElement('input'); nomInput.type='text'; nomInput.placeholder='Nom (par défaut : les coordonnées, ex. A1)';
+  nomRow.append(labelSpan('Nom'), nomInput);
+  modeSel.onchange=()=>{ coordRow.style.display = modeSel.value==='coord' ? 'flex':'none'; };
+  content.append(modeRow, coordRow, nomRow);
+  const actions=document.createElement('div'); actions.className='modal-actions';
+  const cancel=document.createElement('button'); cancel.textContent='Annuler'; cancel.onclick=closeModal;
+  const ok=document.createElement('button'); ok.className='btn-primary'; ok.textContent='Créer';
+  ok.onclick=()=>{
+    let id;
+    if(modeSel.value==='coord') id = absSel.value+ordInput.value;
+    else id = modeSel.value;
+    if(world.regions[id]){ alert('Cette région existe déjà : '+id); return; }
+    const rec={ id, abs: modeSel.value==='coord'?absSel.value:modeSel.value, ord: modeSel.value==='coord'?Number(ordInput.value):undefined, nom: nomInput.value.trim() || id };
+    ensureRecordDefaults('regions', id, rec);
+    world.regions[id]=rec;
+    markDirty(); currentType='regions'; currentId=id; detailMode='edit'; closeModal();
+    renderSidebar(); renderList(); renderDetail();
+  };
+  actions.append(cancel, ok);
+  content.appendChild(actions);
+  showModal(content);
+}
+
+function countReferences(type,id){
+  const record = world[type][id];
+  const self = JSON.stringify(record);
+  const all = JSON.stringify(world);
+  const rx = new RegExp(escapeRegex(id),'g');
+  const total = (all.match(rx)||[]).length;
+  const selfCount = (self.match(rx)||[]).length;
+  return Math.max(0, total-selfCount);
+}
+function confirmDelete(type,id){
+  const count = countReferences(type,id);
+  const content=document.createElement('div');
+  const h=document.createElement('h3'); h.textContent = 'Supprimer « '+(world[type][id].nom||id)+' » ?';
+  content.appendChild(h);
+  const p=document.createElement('p');
+  p.textContent = count>0
+    ? (count+" référence(s) à cet id trouvée(s) ailleurs dans le monde. Elles ne seront pas mises à jour automatiquement.")
+    : "Aucune référence trouvée ailleurs.";
+  content.appendChild(p);
+  const actions=document.createElement('div'); actions.className='modal-actions';
+  const cancel=document.createElement('button'); cancel.textContent='Annuler'; cancel.onclick=closeModal;
+  const del=document.createElement('button'); del.className='btn-danger'; del.textContent='Supprimer définitivement';
+  del.onclick=()=>{
+    delete world[type][id];
+    if(currentId===id) currentId=null;
+    markDirty(); closeModal();
+    renderSidebar(); renderList(); renderDetail();
+  };
+  actions.append(cancel, del);
+  content.appendChild(actions);
+  showModal(content);
+}
+
+/* =========================================================
+   INTEGRITE
+   ========================================================= */
+function collectRefs(type, record){
+  const refs=[];
+  const spec = FORM_SPEC[type]||[];
+  spec.forEach(def=>{
+    const val = getPath(record, def.key);
+    switch(def.kind){
+      case 'ref': if(val) refs.push({value:val, sources:def.sources}); break;
+      case 'ref-list': (val||[]).forEach(v=>refs.push({value:v, sources:def.sources})); break;
+      case 'timeline':
+        (val||[]).forEach(p=>{
+          if(p.debut) refs.push({value:p.debut, sources:['events']});
+          if(p.fin) refs.push({value:p.fin, sources:['events']});
+        });
+        break;
+      case 'roles':
+        (val||[]).forEach(r=>{
+          if(r.lieu) refs.push({value:r.lieu, sources:['lieux','regions']});
+          (r.timeline||[]).forEach(p=>{
+            if(p.debut) refs.push({value:p.debut, sources:['events']});
+            if(p.fin) refs.push({value:p.fin, sources:['events']});
+          });
+        });
+        break;
+      case 'alignements':
+        (val||[]).forEach(a=>{
+          if(a.alignement) refs.push({value:a.alignement, sources:['alignements']});
+          (a.timeline||[]).forEach(p=>{
+            if(p.debut) refs.push({value:p.debut, sources:['events']});
+            if(p.fin) refs.push({value:p.fin, sources:['events']});
+          });
+        });
+        break;
+      case 'membres':
+        (val||[]).forEach(m=>{
+          if(m.id) refs.push({value:m.id, sources:def.sources});
+          (m.timeline||[]).forEach(p=>{
+            if(p.debut) refs.push({value:p.debut, sources:['events']});
+            if(p.fin) refs.push({value:p.fin, sources:['events']});
+          });
+        });
+        break;
+      case 'tuepar':
+        (val||[]).forEach(t=>{
+          if(t.personnage) refs.push({value:t.personnage, sources:['personnages']});
+          if(t.evenement) refs.push({value:t.evenement, sources:['events']});
+        });
+        break;
+      case 'affecte':
+        (val||[]).forEach(a=>{
+          if(a.id){ const coll=TYPE_TO_COLLECTION[a.type]; if(coll) refs.push({value:a.id, sources:[coll]}); }
+        });
+        break;
+      case 'espece-orgs':
+        (val||[]).forEach(o=>{
+          const srcId = o.source && typeof o.source==='object' ? o.source.id : o.source;
+          const srcType = o.source && typeof o.source==='object' ? o.source.type : 'groupe';
+          if(srcId){ const coll = TYPE_TO_COLLECTION[srcType]||'groupes'; refs.push({value:srcId, sources:[coll]}); }
+          (o.timeline||[]).forEach(p=>{
+            if(p.debut) refs.push({value:p.debut, sources:['events']});
+            if(p.fin) refs.push({value:p.fin, sources:['events']});
+          });
+        });
+        break;
+      default: break;
+    }
+  });
+  return refs;
+}
+function runIntegrityCheck(){
+  const validIds = new Set();
+  TYPE_ORDER.forEach(t=>{ Object.keys(world[t]||{}).forEach(id=>validIds.add(id)); });
+  const issues=[];
+  TYPE_ORDER.forEach(t=>{
+    Object.values(world[t]||{}).forEach(record=>{
+      collectRefs(t, record).forEach(ref=>{
+        if(ref.value && !validIds.has(ref.value)){
+          issues.push({type:t, id:record.id, message:'Référence introuvable : "'+ref.value+'"'});
+        }
+      });
+      if(t!=='events' && t!=='regions'){
+        (record.timeline||[]).forEach((p,idx)=>{
+          if(!p.debut) issues.push({type:t, id:record.id, message:'Période #'+(idx+1)+' sans début.'});
+        });
+      }
+      if(t==='especes'){
+        (record.organisations||[]).forEach((o,oi)=>{
+          (o.timeline||[]).forEach((p,idx)=>{
+            if(!p.debut) issues.push({type:t, id:record.id, message:'Organisation #'+(oi+1)+', période #'+(idx+1)+' sans début.'});
+          });
+        });
+      }
+    });
+  });
+  showIntegrityModal(issues);
+}
+function showIntegrityModal(issues){
+  const content=document.createElement('div');
+  const h=document.createElement('h3'); h.textContent="Vérification d'intégrité";
+  content.appendChild(h);
+  if(issues.length===0){
+    const p=document.createElement('p'); p.textContent='Aucun problème détecté.'; content.appendChild(p);
+  } else {
+    const p=document.createElement('p'); p.textContent=issues.length+' problème(s) détecté(s) :'; content.appendChild(p);
+    const list=document.createElement('ul'); list.className='issue-list';
+    issues.forEach(is=>{
+      const li=document.createElement('li');
+      const btn=document.createElement('button'); btn.className='link-btn';
+      btn.textContent = '['+TYPE_META[is.type].singular+'] '+resolveLabel(is.id)+' ('+is.id+') — '+is.message;
+      btn.onclick=()=>{ currentType=is.type; currentId=is.id; detailMode='edit'; closeModal(); renderSidebar(); renderList(); renderDetail(); };
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+    content.appendChild(list);
+  }
+  const actions=document.createElement('div'); actions.className='modal-actions';
+  const close=document.createElement('button'); close.textContent='Fermer'; close.onclick=closeModal;
+  actions.appendChild(close);
+  content.appendChild(actions);
+  showModal(content);
+}
+
+/* =========================================================
+   MODALE GENERIQUE
+   ========================================================= */
+function showModal(contentEl){
+  const overlay=document.createElement('div'); overlay.className='modal-overlay'; overlay.id='modalOverlay';
+  const box=document.createElement('div'); box.className='modal-box';
+  box.appendChild(contentEl);
+  overlay.appendChild(box);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+function closeModal(){ const o=document.getElementById('modalOverlay'); if(o) o.remove(); }
+
+/* =========================================================
+   STATUT / DIRTY
+   ========================================================= */
+function markDirty(){ dirty=true; updateStatus(); }
+function updateStatus(){
+  document.getElementById('fileStatus').textContent = (currentFilename||'monde.json') + (dirty? ' • modifications non enregistrées' : ' • à jour');
+}
+
+/* =========================================================
+   CHARGEMENT / ENREGISTREMENT
+   ========================================================= */
+document.getElementById('btnLoad').onclick = ()=> document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  loadFileObject(f);
+  e.target.value='';
+};
+function loadFileObject(f){
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      world = normalizeWorld(data);
+      currentFilename = f.name;
+      currentType='__home__'; currentId=null; detailMode='view'; listSearchTerm=''; dirty=false;
+      updateStatus(); renderSidebar(); renderList(); renderDetail();
+    }catch(err){
+      alert('Fichier JSON invalide : '+err.message);
+    }
+  };
+  reader.readAsText(f, 'utf-8');
+}
+document.getElementById('btnSave').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(world, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = currentFilename || 'monde.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  dirty=false; updateStatus();
+};
+document.getElementById('btnNew').onclick = ()=>{
+  if(!confirm('Créer un nouveau monde vide ? Les données non enregistrées seront perdues.')) return;
+  world = emptyWorld(); currentFilename='monde.json'; currentType='__home__'; currentId=null; detailMode='view'; listSearchTerm=''; dirty=false;
+  updateStatus(); renderSidebar(); renderList(); renderDetail();
+};
+document.getElementById('btnCheck').onclick = runIntegrityCheck;
+document.getElementById('btnRandom').onclick = ()=>{
+  const all=[];
+  TYPE_ORDER.forEach(t=>{ Object.keys(world[t]||{}).forEach(id=>all.push([t,id])); });
+  if(all.length===0){ alert('Le monde est vide — rien à tirer au sort.'); return; }
+  const [t,id] = all[Math.floor(Math.random()*all.length)];
+  currentType=t; currentId=id; detailMode='view';
+  renderSidebar(); renderList(); renderDetail();
+};
+
+/* Recherche globale : cherche dans TOUT le contenu d'une fiche (tags, anecdotes, texte narratif,
+   tout ce qui alimente l'infobox…) en comparant le texte brut de la fiche entière. */
+function searchAllRecords(query){
+  const q = query.trim().toLowerCase();
+  if(!q) return [];
+  const results = [];
+  TYPE_ORDER.forEach(t=>{
+    Object.values(world[t]||{}).forEach(r=>{
+      const haystack = JSON.stringify(r).toLowerCase();
+      if(haystack.includes(q)) results.push({ type:t, record:r });
+    });
+  });
+  results.sort((a,b)=>{
+    const an = (a.record.nom||'').toLowerCase(), bn = (b.record.nom||'').toLowerCase();
+    const aStarts = an.startsWith(q), bStarts = bn.startsWith(q);
+    if(aStarts!==bStarts) return aStarts ? -1 : 1;
+    return an.localeCompare(bn,'fr');
+  });
+  return results.slice(0,20);
+}
+(function setupGlobalSearch(){
+  const input = document.getElementById('globalSearch');
+  const wrap = input.parentElement;
+  let dropdown = null;
+  function closeDropdown(){ if(dropdown){ dropdown.remove(); dropdown=null; } }
+  function render(){
+    const q = input.value;
+    if(!q.trim()){ closeDropdown(); return; }
+    const results = searchAllRecords(q);
+    if(!dropdown){ dropdown = document.createElement('div'); dropdown.className='global-search-dropdown'; wrap.appendChild(dropdown); }
+    dropdown.innerHTML = '';
+    if(results.length===0){
+      const empty = document.createElement('div'); empty.className='global-search-empty'; empty.textContent = 'Aucune fiche ne correspond à « '+q+' ».';
+      dropdown.appendChild(empty);
+      return;
+    }
+    results.forEach(({type, record})=>{
+      const item = document.createElement('div'); item.className='global-search-item';
+      const nameSpan = document.createElement('span'); nameSpan.textContent = record.nom || '(sans nom)';
+      const typeSpan = document.createElement('span'); typeSpan.className='gs-type'; typeSpan.textContent = TYPE_META[type].singular;
+      item.append(nameSpan, typeSpan);
+      item.onmousedown = (e)=>{
+        e.preventDefault();
+        currentType = type; currentId = record.id; detailMode='view';
+        renderSidebar(); renderList(); renderDetail();
+        input.value=''; closeDropdown();
+      };
+      dropdown.appendChild(item);
+    });
+  }
+  input.addEventListener('input', render);
+  input.addEventListener('focus', render);
+  input.addEventListener('keydown', e=>{ if(e.key==='Escape'){ input.blur(); closeDropdown(); } });
+  input.addEventListener('blur', ()=> setTimeout(closeDropdown, 150));
+})();
+
+document.body.addEventListener('dragover', e=> e.preventDefault());
+document.body.addEventListener('drop', e=>{
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if(f && f.name.toLowerCase().endsWith('.json')) loadFileObject(f);
+});
+
+/* =========================================================
+   INIT
+   ========================================================= */
+renderSidebar();
+renderList();
+renderDetail();
+updateStatus();
+</script>
+</body>
+</html>
