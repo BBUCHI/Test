@@ -2110,10 +2110,10 @@ async function tryAutosave(){
   }
 }
 setInterval(tryAutosave, AUTOSAVE_INTERVAL_MS);
-document.getElementById('btnSave').onclick = ()=>{
+/*document.getElementById('btnSave').onclick = ()=>{
   downloadJson(world, currentFilename || 'monde.json');
   dirty=false; updateStatus();
-};
+};*/
 document.getElementById('btnNew').onclick = ()=>{
   if(!confirm('Créer un nouveau monde vide ? Les données non enregistrées seront perdues.')) return;
   world = emptyWorld(); currentFilename='monde.json'; currentType='__home__'; currentId=null; detailMode='view'; listSearchTerm=''; dirty=false;
