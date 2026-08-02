@@ -2114,11 +2114,11 @@ setInterval(tryAutosave, AUTOSAVE_INTERVAL_MS);
   downloadJson(world, currentFilename || 'monde.json');
   dirty=false; updateStatus();
 };*/
-document.getElementById('btnNew').onclick = ()=>{
+/*document.getElementById('btnNew').onclick = ()=>{
   if(!confirm('Créer un nouveau monde vide ? Les données non enregistrées seront perdues.')) return;
   world = emptyWorld(); currentFilename='monde.json'; currentType='__home__'; currentId=null; detailMode='view'; listSearchTerm=''; dirty=false;
   updateStatus(); renderSidebar(); renderList(); renderDetail();
-};
+};*/
 document.getElementById('btnCheck').onclick = runIntegrityCheck;
 document.getElementById('btnRandom').onclick = ()=>{
   const all=[];
