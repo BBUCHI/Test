@@ -1,9 +1,5 @@
 # Atlas
 
-Outils pour explorer et faire vivre un monde imaginaire — 100% statique,
-aucune installation, aucune dépendance. Fonctionne dans n'importe quel
-navigateur moderne une fois hébergé en `https://` (ex. GitHub Pages).
-
 ## Structure
 
 ```
