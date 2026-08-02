@@ -158,7 +158,7 @@
   .narrative-item textarea{ flex:1; }
   .fact-line{ margin:0 0 6px; }
   .fact-line.empty{ color:var(--text-muted); font-style:italic; }
-  .view-list{ margin:0 0 8px; padding-left:22px; line-height:1.7; }
+  .view-list{ margin:0 0 8px; list-style: none;  padding-left: 0; line-height:1.7; }
   .wiki-link{ color:var(--link); }
   .wiki-link.missing{ color:var(--red-link); }
   .chip-row-view{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 8px; }

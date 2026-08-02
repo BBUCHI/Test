@@ -57,7 +57,7 @@ function findRecordAnywhere(id){
   for(const t of TYPE_ORDER){ if((world[t]||{})[id]) return t; }
   return null;
 }
-/* Cherche une fiche par NOM exact (insensible à la casse), tous types confondus — utilisé
+/* Cherche une fiche par NOM exact (insensible à la casse), tous types confondus - utilisé
    par les liens narratifs [[Nom]], puisqu'un lien de texte libre ne connaît pas de "sources". */
 function resolveByName(nom){
   const lower = (nom||'').trim().toLowerCase();
@@ -90,7 +90,7 @@ function makeWikiTextLink(raw){
   }
   return a;
 }
-/* Rendu inline combiné : [[liens wiki]], texte en gras/italique, code — dans une seule passe
+/* Rendu inline combiné : [[liens wiki]], texte en gras/italique, code - dans une seule passe
    pour ne jamais laisser un marqueur mal interprété. */
 const INLINE_MD_RE = /\[\[([^\]]+)\]\]|\*\*([^*]+)\*\*|\*([^*]+)\*|_([^_]+)_|`([^`]+)`/g;
 function renderInlineMarkdown(container, text){
@@ -132,7 +132,7 @@ function renderNarrativeText(container, text){
     firstLine = false;
   });
 }
-/* Modale : la fiche ciblée par un [[lien]] n'existe pas encore — on choisit son type puis on la crée. */
+/* Modale : la fiche ciblée par un [[lien]] n'existe pas encore - on choisit son type puis on la crée. */
 function openTypePickerForName(nom){
   const content = document.createElement('div');
   const h = document.createElement('h3'); h.textContent = 'Créer « '+nom+' » en tant que\u2026';
@@ -160,7 +160,7 @@ function openTypePickerForName(nom){
   content.appendChild(actions);
   showModal(content);
 }
-/* Recherche libre par nom (tous types, sauf Région dont l'id n'est pas un nom) — utilisée par
+/* Recherche libre par nom (tous types, sauf Région dont l'id n'est pas un nom) - utilisée par
    l'autocomplétion des liens [[...]] pendant la frappe. */
 function searchEntitiesByName(query){
   const q = (query||'').trim().toLowerCase();
@@ -205,7 +205,7 @@ function attachWikiLinkAutocomplete(ta){
     dropdown.innerHTML='';
     if(matches.length===0){
       const empty = document.createElement('div'); empty.className='wikilink-ac-empty';
-      empty.textContent = info.query ? ('Aucune fiche « '+info.query+' » — proposée à la création au clic sur le lien') : 'Tapez pour chercher une fiche\u2026';
+      empty.textContent = info.query ? ('Aucune fiche « '+info.query+' » - proposée à la création au clic sur le lien') : 'Tapez pour chercher une fiche\u2026';
       dropdown.appendChild(empty);
       return;
     }
@@ -381,14 +381,14 @@ function renderList(){
   if(currentType==='__home__'){
     const h = document.createElement('h2'); h.style.fontFamily='var(--font-heading)'; h.style.fontWeight='400'; h.textContent='Accueil';
     const p = document.createElement('p'); p.className='empty-hint';
-    p.textContent = "Vue d'ensemble de toutes les fiches du monde et de leur niveau de remplissage.";
+    p.textContent = "Par où commencer ?";
     panel.append(h, p);
     return;
   }
   if(currentType==='__notes__'){
     const h = document.createElement('h2'); h.style.fontFamily='var(--font-heading)'; h.style.fontWeight='400'; h.textContent='Bloc-notes';
     const p = document.createElement('p'); p.className='empty-hint';
-    p.textContent = "Un espace libre pour vos idées, en vrac — sauvegardé avec le monde, mais indépendant des fiches.";
+    p.textContent = "Un espace libre pour vos idées, en vrac. Sauvegardé avec le monde, mais indépendant des fiches.";
     panel.append(h, p);
     return;
   }
@@ -409,7 +409,7 @@ function renderList(){
     marquantBtn.onclick = generateMarquantEventsGrid;
     header.appendChild(marquantBtn);
   }
-  const search = document.createElement('input'); search.className='search-input'; search.placeholder='Rechercher (nom, tag, id)…';
+  const search = document.createElement('input'); search.className='search-input'; search.placeholder='Rechercher...';
   search.value = listSearchTerm;
   search.oninput = ()=>{ listSearchTerm = search.value; renderListItems(itemsWrap); };
   const sortRow = document.createElement('div'); sortRow.className='sort-row';
@@ -448,7 +448,7 @@ function renderListItems(wrap){
    RENDU — DETAIL
    ========================================================= */
 function emptyStateHtml(){
-  return '<div class="empty-state"><p>Sélectionnez un élément dans la liste, ou créez-en un nouveau.</p></div>';
+  return '<div class="empty-state"><p>Pas d\'élément seléctioné.</p></div>';
 }
 function clearDynDatalists(){ document.querySelectorAll('.dyn-datalist').forEach(e=>e.remove()); }
 
@@ -503,7 +503,7 @@ function renderHomepage(){
   const wrap = document.createElement('div'); wrap.className='wiki-page';
   const h1 = document.createElement('h1'); h1.className='wiki-title'; h1.textContent='Accueil';
   const subtitle = document.createElement('div'); subtitle.className='wiki-subtitle';
-  subtitle.textContent = 'Quelques pages au hasard pour se promener dans le monde.';
+  subtitle.textContent = '';
   wrap.append(h1, subtitle);
   const rule = document.createElement('div'); rule.className='wiki-title-rule';
   wrap.appendChild(rule);
@@ -515,7 +515,7 @@ function renderHomepage(){
   });
 
   if(pool.length===0){
-    const p = document.createElement('p'); p.className='empty-hint'; p.textContent='Le monde est vide — créez votre première fiche depuis la barre latérale.';
+    const p = document.createElement('p'); p.className='empty-hint'; p.textContent='Le monde est vide.';
     wrap.appendChild(p);
     panel.appendChild(wrap);
     return;
@@ -545,7 +545,7 @@ function renderNotes(){
   const wrap = document.createElement('div'); wrap.className='wiki-page';
   const h1 = document.createElement('h1'); h1.className='wiki-title'; h1.textContent='Bloc-notes';
   const subtitle = document.createElement('div'); subtitle.className='wiki-subtitle';
-  subtitle.textContent = 'Espace libre — sauvegardé avec le monde, indépendant des fiches.';
+  subtitle.textContent = 'Espace libre. Sauvegardé avec le monde, indépendant des fiches.';
   wrap.append(h1, subtitle);
   const rule = document.createElement('div'); rule.className='wiki-title-rule';
   wrap.appendChild(rule);
@@ -681,7 +681,6 @@ function renderCustomSectionsEdit(container, type, record){
   const h3 = document.createElement('h3'); h3.textContent='Sections narratives supplémentaires';
   section.appendChild(h3);
   const hint = document.createElement('p'); hint.className='field-hint';
-  hint.textContent = "Ajoutez des sections libres propres à cette fiche (ex. « Inventions » pour un inventeur, « Batailles » pour un stratège…). Markdown léger pris en charge : **gras**, *italique*, `code`, listes à puces (- item).";
   section.appendChild(hint);
   buildCustomSectionsEditor(section, arr, ()=>markDirty());
   container.appendChild(section);
@@ -863,7 +862,7 @@ function sortByRecency(arr, getTimeline){
 function appendPeriodsInline(container, timeline){
   const periods = timeline||[];
   if(periods.length===0) return;
-  container.appendChild(document.createTextNode(' — '));
+  container.appendChild(document.createTextNode(' - '));
   periods.forEach((p,i)=>{
     container.appendChild(p.debut ? makeViewLink(p.debut, ['events']) : document.createTextNode('?'));
     container.appendChild(document.createTextNode(' \u2013 '));
@@ -955,7 +954,7 @@ function renderFieldView(container, record, def){
     }
     case 'number': {
       const p=document.createElement('p'); p.className='fact-line'+((val===null||val===undefined||val==='')?' empty':'');
-      p.textContent = (val===null||val===undefined||val==='') ? '—' : val;
+      p.textContent = (val===null||val===undefined||val==='') ? '-' : val;
       container.appendChild(p); break;
     }
     case 'boolean': {
@@ -1001,7 +1000,7 @@ function renderFieldView(container, record, def){
         li.appendChild(document.createTextNode('De '));
         li.appendChild(p.debut ? makeViewLink(p.debut, ['events']) : document.createTextNode('?'));
         li.appendChild(document.createTextNode(' à '));
-        li.appendChild(p.fin ? makeViewLink(p.fin, ['events']) : document.createTextNode('aujourd\u2019hui / en cours'));
+        li.appendChild(p.fin ? makeViewLink(p.fin, ['events']) : document.createTextNode('aujourd\u2019hui'));
         ul.appendChild(li);
       });
       container.appendChild(ul); break;
@@ -1013,7 +1012,7 @@ function renderFieldView(container, record, def){
       const ul=document.createElement('ul'); ul.className='view-list';
       sorted.forEach(r=>{
         const li=document.createElement('li');
-        li.appendChild(document.createTextNode((r.nom||'(rôle)')+' — '));
+        li.appendChild(document.createTextNode((r.nom||'(rôle)')+' - '));
         if(r.lieu) li.appendChild(makeViewLink(r.lieu, ['lieux','regions'])); else li.appendChild(document.createTextNode('lieu inconnu'));
         appendPeriodsInline(li, r.timeline);
         ul.appendChild(li);
@@ -1056,7 +1055,7 @@ function renderFieldView(container, record, def){
         const li=document.createElement('li');
         li.appendChild(document.createTextNode('Tué par '));
         if(t.personnage) li.appendChild(makeViewLink(t.personnage, ['personnages']));
-        if(t.evenement){ li.appendChild(document.createTextNode(' — mort en ')); li.appendChild(makeViewLink(t.evenement, ['events'])); }
+        if(t.evenement){ li.appendChild(document.createTextNode(' - mort en ')); li.appendChild(makeViewLink(t.evenement, ['events'])); }
         ul.appendChild(li);
       });
       container.appendChild(ul); break;
@@ -1095,7 +1094,7 @@ function renderFieldView(container, record, def){
       arr.forEach(h=>{
         const li=document.createElement('li');
         li.appendChild(makeViewLink(h.personnage, ['personnages']));
-        li.appendChild(document.createTextNode(' — '+(h.role||'')));
+        li.appendChild(document.createTextNode(' - '+(h.role||'')));
         ul.appendChild(li);
       });
       container.appendChild(ul); break;
@@ -1107,7 +1106,7 @@ function renderFieldView(container, record, def){
       const ul=document.createElement('ul'); ul.className='view-list';
       sorted.forEach(o=>{
         const li=document.createElement('li');
-        li.appendChild(document.createTextNode((o.type_organisation||'(type inconnu)')+' — source : '));
+        li.appendChild(document.createTextNode((o.type_organisation||'(type inconnu)')+' - source : '));
         const srcType = o.source && typeof o.source==='object' ? o.source.type : null;
         const srcId = o.source && typeof o.source==='object' ? o.source.id : o.source;
         if(srcId){
@@ -1404,7 +1403,7 @@ function ensureDatalist(sources, excludeFlag){
       if(excludeFlag && r[excludeFlag]) return;
       const opt = document.createElement('option');
       opt.value = id;
-      opt.textContent = (r.nom? r.nom+' — ':'') + id;
+      opt.textContent = (r.nom? r.nom+' - ':'') + id;
       dl.appendChild(opt);
     });
   });
@@ -1611,7 +1610,7 @@ function buildHabitants(container, record, onChange){
   const list=document.createElement('ul'); list.className='readonly-list';
   (record.habitants||[]).forEach(h=>{
     const li=document.createElement('li');
-    li.textContent = resolveLabel(h.personnage)+' — '+(h.role||'');
+    li.textContent = resolveLabel(h.personnage)+' - '+(h.role||'');
     list.appendChild(li);
   });
   const btn=document.createElement('button'); btn.type='button'; btn.className='btn-small'; btn.textContent='Recalculer depuis les rôles';
@@ -1936,7 +1935,7 @@ function showIntegrityModal(issues){
     issues.forEach(is=>{
       const li=document.createElement('li');
       const btn=document.createElement('button'); btn.className='link-btn';
-      btn.textContent = '['+TYPE_META[is.type].singular+'] '+resolveLabel(is.id)+' ('+is.id+') — '+is.message;
+      btn.textContent = '['+TYPE_META[is.type].singular+'] '+resolveLabel(is.id)+' ('+is.id+') - '+is.message;
       btn.onclick=()=>{ currentType=is.type; currentId=is.id; detailMode='edit'; closeModal(); renderSidebar(); renderList(); renderDetail(); };
       li.appendChild(btn);
       list.appendChild(li);
@@ -2124,7 +2123,7 @@ document.getElementById('btnCheck').onclick = runIntegrityCheck;
 document.getElementById('btnRandom').onclick = ()=>{
   const all=[];
   TYPE_ORDER.forEach(t=>{ Object.keys(world[t]||{}).forEach(id=>all.push([t,id])); });
-  if(all.length===0){ alert('Le monde est vide — rien à tirer au sort.'); return; }
+  if(all.length===0){ alert('Aucune page existante.'); return; }
   const [t,id] = all[Math.floor(Math.random()*all.length)];
   currentType=t; currentId=id; detailMode='view';
   renderSidebar(); renderList(); renderDetail();
