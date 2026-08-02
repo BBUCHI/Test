@@ -1983,12 +1983,12 @@ function loadFileObject(f){
     alert('Fichier JSON invalide : '+err.message);
   });
 }
-document.getElementById('btnLoad').onclick = ()=> document.getElementById('fileInput').click();
-document.getElementById('fileInput').onchange = (e)=>{
+//document.getElementById('btnLoad').onclick = ()=> document.getElementById('fileInput').click();
+/*document.getElementById('fileInput').onchange = (e)=>{
   const f = e.target.files[0]; if(!f) return;
   loadFileObject(f);
   e.target.value='';
-};
+};*/
 
 /* =========================================================
    INTÉGRATION GITHUB — charger/enregistrer le monde dans un dépôt
